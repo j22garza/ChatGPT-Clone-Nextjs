@@ -29,11 +29,11 @@ export default async function handler(
   const response = await query(prompt, chatId, model);
 
   const message: Message = {
-    text: response || "ChatGpt unable to answer that!",
+    text: response || "Conexus unable to answer that!",
     createdAt: admin.firestore.Timestamp.now(),
     user: {
-      name: "ChatGPT",
-      email: "ChatGPT",
+      name: "Conexus",
+      email: "Conexus",
       avatar:
         "https://drive.google.com/uc?export=download&id=1ikaBBU-OsBSHkleHQmf15ww0vgX-A0Kz",
     },

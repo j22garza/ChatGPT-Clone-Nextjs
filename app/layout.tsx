@@ -11,8 +11,8 @@ import { authOption } from '../pages/api/auth/[...nextauth]'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ChatGPT',
-  description: 'A ChatGPT clone',
+  title: 'Conexus',
+  description: 'A Conexus clone',
 }
 
 export default async function RootLayout({

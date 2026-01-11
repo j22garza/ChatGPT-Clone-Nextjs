@@ -9,7 +9,7 @@ type Props = {
 };
 
 function Message({ message }: Props) {
-  const isChatGPT = message.user.name === "ChatGPT";
+  const isChatGPT = message.user.name === "Conexus";
 
   return (
     <motion.div
