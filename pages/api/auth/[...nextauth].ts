@@ -17,7 +17,7 @@ export const authOption = {
   ],
 
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account }: any) {
       if (user) {
         token.uid = user.id;
       }
