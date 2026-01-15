@@ -1,9 +1,15 @@
 import admin from "firebase-admin";
 import { getApps } from "firebase-admin/app";
 
-const serviceAccount = JSON.parse(
-  process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
-);
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
+  );
+} catch (error) {
+  console.error("Error parsing FIREBASE_SERVICE_ACCOUNT_KEY:", error);
+  throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY must be a valid JSON string");
+}
 
 if (!getApps().length) {
   admin.initializeApp({

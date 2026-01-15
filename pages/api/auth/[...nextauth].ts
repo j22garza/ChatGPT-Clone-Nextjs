@@ -6,13 +6,6 @@ export const authOption = {
     GoogleProvider({
       clientId: process.env.WEB_CLIENT_ID || process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.WEB_CLIENT_SECRET || process.env.WEB_CLIENT_KEY || process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
     }),
   ],
 
@@ -38,6 +31,10 @@ export const authOption = {
 
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
+  pages: {
+    signIn: "/api/auth/signin",
+    error: "/api/auth/error",
+  },
 };
 
 export default NextAuth(authOption);

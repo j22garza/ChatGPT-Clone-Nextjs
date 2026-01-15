@@ -1,10 +1,34 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 type Props = {};
 
 function Login({}: Props) {
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
+  useEffect(() => {
+    // Check for error in URL
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get("error");
+      if (error === "OAuthSignin") {
+        setErrorMessage("Error al iniciar sesión con Google. Verifica las credenciales en Vercel.");
+      } else if (error) {
+        setErrorMessage(`Error: ${error}`);
+      }
+    }
+  }, []);
+
+  const handleSignIn = async () => {
+    try {
+      await signIn("google", { callbackUrl: "/" });
+    } catch (err) {
+      console.error("Error signing in:", err);
+    }
+  };
+
   return (
     <div className="bg-white h-screen flex flex-col items-center justify-center text-center">
       <div className="h-20 w-20 mb-12">
@@ -14,8 +38,13 @@ function Login({}: Props) {
         <h3 className="text-[#2D333A] text-xl sm:text-3xl font-semibold">Welcome to Conexus Clone</h3>
         <p className="flex text-sm font-medium text-gray-600 -mt-1 justify-end">created by &nbsp;<a className="underline hover:text-black" href="http://developercc.com" target="_blank" rel="noopener noreferrer">www.developercc.com</a></p>
       </div>
+      {errorMessage && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded max-w-md">
+          <p className="text-sm">{errorMessage}</p>
+        </div>
+      )}
       <button
-        onClick={() => signIn("google")}
+        onClick={handleSignIn}
         className="text-black hover:bg-gray-300 text-lg py-3 rounded-sm px-6 border border-gray-800 transform transition-colors duration-500"
       >
         Continue with Google
