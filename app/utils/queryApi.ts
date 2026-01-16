@@ -1,4 +1,5 @@
 import openai from "./chatgpt";
+import { getActiveProvider, LLM_PROVIDERS, type LLMProvider } from "./llmProviders";
 
 // Función para buscar en internet usando Tavily
 const searchWeb = async (query: string): Promise<string> => {
@@ -65,6 +66,11 @@ Debes:
 Sé profesional, claro y conciso. Responde en español. Usa formato Markdown para estructurar tus respuestas.`;
 
   try {
+    // Verificar que la API key esté configurada
+    if (!process.env.CHAT_GPT_KEY) {
+      throw new Error("CHAT_GPT_KEY no está configurada en las variables de entorno");
+    }
+
     // Detectar si la consulta requiere búsqueda web
     const needsWebSearch = 
       prompt.toLowerCase().includes("actual") ||
@@ -90,16 +96,48 @@ Sé profesional, claro y conciso. Responde en español. Usa formato Markdown par
       enhancedPrompt = `${prompt}\n\n--- Información actualizada de internet ---\n${webSearchResults}\n--- Fin de información web ---\n\nUsa esta información para enriquecer tu respuesta.`;
     }
     
-    const response = await openai.chat.completions.create({
-      model: model || "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messageHistory,
-        { role: "user", content: enhancedPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
+    // Obtener proveedor activo
+    const activeProvider = getActiveProvider();
+    const providerConfig = LLM_PROVIDERS[activeProvider];
+    
+    // Usar modelo del proveedor o el especificado
+    const modelToUse = model || providerConfig.model;
+    
+    // Optimización: Reducir max_tokens para respuestas más rápidas
+    // Para EHS, 1500 tokens es suficiente para respuestas completas
+    let response;
+    
+    if (activeProvider === 'groq' && providerConfig.apiKey) {
+      // Groq usa endpoint compatible con OpenAI
+      const groqClient = new (await import("openai")).OpenAI({
+        apiKey: providerConfig.apiKey,
+        baseURL: providerConfig.endpoint,
+      });
+      
+      response = await groqClient.chat.completions.create({
+        model: modelToUse,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messageHistory,
+          { role: "user", content: enhancedPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      });
+    } else {
+      // OpenAI por defecto (o fallback)
+      response = await openai.chat.completions.create({
+        model: modelToUse,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messageHistory,
+          { role: "user", content: enhancedPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500, // Reducido de 2000 para mayor velocidad
+        stream: false,
+      });
+    }
 
     return response.choices[0].message.content || "Connie no pudo responder en este momento.";
   } catch (err: any) {

@@ -3,9 +3,41 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    @apply border-white/10;
+  }
+
   body {
     @apply bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 text-white;
     background-attachment: fixed;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar - Estilo moderno y sutil */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+    background-clip: padding-box;
   }
 }
 
@@ -62,5 +94,13 @@
   .btn-secondary {
     @apply glass hover:glass-strong text-white font-medium px-4 py-2 rounded-lg
            transition-all duration-300;
+  }
+
+  /* Line clamp utility */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }

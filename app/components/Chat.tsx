@@ -33,15 +33,17 @@ function Chat({ chatId }: Props) {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden pb-32 custom-scrollbar">
       {messages?.empty && (
-        <>
+        <div className="min-h-full flex items-center justify-center">
           <HomeContent/>
-        </>
+        </div>
       )}
-      {messages?.docs.map((message) => (
-        <Message key={message.id} message={message.data()} />
-      ))}
+      <div className="max-w-3xl mx-auto">
+        {messages?.docs.map((message) => (
+          <Message key={message.id} message={message.data()} />
+        ))}
+      </div>
       <div ref={messageEndRef} />
     </div>
   );

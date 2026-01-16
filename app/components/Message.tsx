@@ -14,48 +14,55 @@ function Message({ message }: Props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={`py-6 px-4 md:px-10 ${
-        isConnie 
-          ? "glass-strong border-l-4 border-blue-400" 
-          : "bg-transparent"
+      transition={{ duration: 0.2 }}
+      className={`group py-6 px-4 md:px-6 lg:px-12 ${
+        isConnie ? "" : ""
       }`}
     >
-      <div className="flex items-start space-x-4 max-w-4xl mx-auto">
-        <div className={`flex-shrink-0 ${
-          isConnie 
-            ? "w-10 h-10 bg-gradient-to-br from-blue-500 to-navy-800 rounded-full flex items-center justify-center shadow-glow" 
-            : "w-10 h-10 bg-white/10 rounded-full flex items-center justify-center"
-        }`}>
+      <div className="flex items-start gap-4 max-w-3xl mx-auto">
+        {/* Avatar */}
+        <div className="flex-shrink-0">
           {isConnie ? (
-            <span className="text-xl">🤖</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+              <span className="text-lg">🤖</span>
+            </div>
           ) : (
             <img 
               src={message.user.avatar} 
               alt={message.user.name} 
-              className="w-full h-full rounded-full object-cover" 
+              className="w-8 h-8 rounded-lg object-cover" 
             />
           )}
         </div>
-        <div className="flex-1 pt-1">
-          <div className="flex items-center space-x-2 mb-2">
-            <span className={`font-semibold text-sm ${
-              isConnie ? "text-blue-300" : "text-gray-300"
-            }`}>
-              {isConnie ? "Connie" : message.user.name}
-            </span>
-            {isConnie && (
-              <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full border border-blue-400/30">
-                EHS Specialist
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 pt-0.5">
+          {/* Header - Solo para Connie */}
+          {isConnie && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-semibold text-white">Connie</span>
+              <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-md border border-blue-400/30">
+                EHS
               </span>
-            )}
-          </div>
-          <div className={`prose prose-invert max-w-none ${
-            isConnie ? "text-gray-200" : "text-gray-300"
+            </div>
+          )}
+          
+          {/* Message Content */}
+          <div className={`prose prose-invert prose-sm max-w-none ${
+            isConnie 
+              ? "text-gray-100" 
+              : "text-gray-300"
           }`}>
-            <ReactMarkdown className="text-sm sm:text-base leading-relaxed">
+            <ReactMarkdown 
+              className="leading-7 [&>p]:mb-4 [&>p:last-child]:mb-0
+                       [&>ul]:my-4 [&>ol]:my-4 [&>li]:my-1
+                       [&>h1]:text-xl [&>h2]:text-lg [&>h3]:text-base
+                       [&>code]:bg-white/10 [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm
+                       [&>pre]:bg-white/5 [&>pre]:p-4 [&>pre]:rounded-lg [&>pre]:overflow-x-auto
+                       [&>blockquote]:border-l-4 [&>blockquote]:border-blue-500/50 [&>blockquote]:pl-4 [&>blockquote]:italic"
+            >
               {message.text}
             </ReactMarkdown>
           </div>

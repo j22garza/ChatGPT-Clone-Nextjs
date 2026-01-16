@@ -41,27 +41,29 @@ function NewChat({ session, toggleSidebar }: Props) {
   };
 
   return (
-    <div className="flex space-x-2 mb-4">
-      <div className="chatRow flex-1 justify-start" onClick={createNewChat}>
+    <div className="px-2 mb-3">
+      <button
+        onClick={createNewChat}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20
+                 transition-all duration-150 group"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
-          fill="currentColor"
-          className="w-5 h-5 text-blue-400"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className="w-4 h-4 text-gray-400 group-hover:text-white"
         >
           <path
-            fillRule="evenodd"
-            d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
-            clipRule="evenodd"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 4.5v15m7.5-7.5h-15"
           />
         </svg>
-        <p className="font-medium">Nueva Conversación</p>
-      </div>
-      <div onClick={() => toggleSidebar()} className="flex min-w-[50px] justify-center items-center glass hover:glass-strong rounded-lg cursor-pointer border border-white/10">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-300">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-        </svg>
-      </div>
+        <span className="text-sm font-medium text-gray-300 group-hover:text-white">Nueva conversación</span>
+      </button>
     </div>
   );
 }

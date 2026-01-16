@@ -2,8 +2,8 @@ import HomeContent from "./components/HomeContent";
 
 export default function Home() {
   return (
-      <div>
-        <HomeContent/>
-      </div>
+    <div className="h-full overflow-y-auto">
+      <HomeContent/>
+    </div>
   )
 }

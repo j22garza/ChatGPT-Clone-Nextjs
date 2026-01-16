@@ -13,15 +13,10 @@ type Props = {
 
 function ChatPage({ params: { id } }: Props) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      className="flex flex-col h-screen overflow-hidden"
-    >
+    <div className="flex flex-col h-full">
       <Chat chatId={id} />
       <ChatInput chatId={id} />
-    </motion.div>
+    </div>
   );
 }
 

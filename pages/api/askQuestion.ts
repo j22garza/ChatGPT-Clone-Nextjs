@@ -26,29 +26,43 @@ export default async function handler(
 
   try {
     // Get previous messages for context
-    const messagesRef = adminDb
-      .collection("users")
-      .doc(session?.user?.email)
-      .collection("chats")
-      .doc(chatId)
-      .collection("messages")
-      .orderBy("createdAt", "asc")
-      .limit(10);
+    let previousMessages: any[] = [];
+    try {
+      const messagesRef = adminDb
+        .collection("users")
+        .doc(session?.user?.email)
+        .collection("chats")
+        .doc(chatId)
+        .collection("messages")
+        .orderBy("createdAt", "asc")
+        .limit(10);
 
-    const messagesSnapshot = await messagesRef.get();
-    const previousMessages = messagesSnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        role: data.user.name === "Connie" ? "assistant" : "user",
-        content: data.text
-      };
-    });
+      const messagesSnapshot = await messagesRef.get();
+      previousMessages = messagesSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          role: data.user.name === "Connie" ? "assistant" : "user",
+          content: data.text
+        };
+      });
+    } catch (firebaseError: any) {
+      console.warn("Error getting previous messages, continuing without context:", firebaseError.message);
+    }
 
-    // Query Connie AI
-    const response = await query(prompt, chatId, model, previousMessages);
+    // Query Connie AI with timeout
+    const queryPromise = query(prompt, chatId, model, previousMessages);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout: La consulta tardó demasiado")), 60000)
+    );
+
+    const response = await Promise.race([queryPromise, timeoutPromise]) as string;
+
+    if (!response || response.trim() === "") {
+      throw new Error("Connie no pudo generar una respuesta");
+    }
 
     const message: Message = {
-      text: response || "Lo siento, Connie no pudo responder en este momento.",
+      text: response,
       createdAt: admin.firestore.Timestamp.now(),
       user: {
         name: "Connie",
@@ -57,17 +71,23 @@ export default async function handler(
       },
     };
 
-    await adminDb
-      .collection("users")
-      .doc(session?.user?.email)
-      .collection("chats")
-      .doc(chatId)
-      .collection("messages")
-      .add(message);
+    try {
+      await adminDb
+        .collection("users")
+        .doc(session?.user?.email)
+        .collection("chats")
+        .doc(chatId)
+        .collection("messages")
+        .add(message);
+    } catch (firebaseError: any) {
+      console.error("Error saving message to Firebase:", firebaseError);
+      // Still return the response even if Firebase fails
+    }
 
     res.status(200).json({ answer: message.text });
   } catch (error: any) {
     console.error("Error in askQuestion:", error);
-    res.status(500).json({ answer: "Error al procesar la consulta. Por favor intenta de nuevo." });
+    const errorMessage = error.message || "Error al procesar la consulta. Por favor intenta de nuevo.";
+    res.status(500).json({ answer: errorMessage });
   }
 }

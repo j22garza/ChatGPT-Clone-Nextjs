@@ -40,32 +40,54 @@ function Sidebar({}: Props) {
         </div>
       ) :
       (
-        <div className={`p-3 flex flex-col h-screen glass-strong border-r border-white/10 ${open ? 'w-72 transition-w ease-in duration-2000 overflow-hidden' : 'w-0 transition-w ease-in duration-2000'}`}>
-          <div className="mb-4 px-2">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-navy-800 rounded-lg flex items-center justify-center">
-                <span className="text-lg">🤖</span>
+        <div className={`p-2 flex flex-col h-screen bg-navy-900/50 backdrop-blur-xl border-r border-white/10 ${open ? 'w-64 transition-all duration-300 overflow-hidden' : 'w-0 transition-all duration-300'}`}>
+          {/* Header */}
+          <div className="mb-3 px-3 py-2">
+            <button
+              onClick={toggleSidebar}
+              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm">🤖</span>
               </div>
-              <div>
-                <h2 className="text-white font-bold text-sm">Conexus</h2>
-                <p className="text-xs text-gray-400">Connie IA</p>
+              <div className="flex-1 text-left min-w-0">
+                <h2 className="text-sm font-semibold text-white truncate">Conexus</h2>
+                <p className="text-xs text-gray-500 truncate">Connie IA</p>
               </div>
-            </div>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                strokeWidth={2} 
+                stroke="currentColor" 
+                className="w-4 h-4 text-gray-400 group-hover:text-gray-300 flex-shrink-0"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <div className="flex-1 overflow-y-scroll">
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
               <NewChat session={session} toggleSidebar={toggleSidebar} />
-              <p className="text-gray-400 mt-4 ml-4 pb-0 text-sm font-medium">Conversaciones Anteriores</p>
-              <div className="flex flex-col space-y-2 my-2">
+              {chats && chats.docs.length > 0 && (
+                <div className="px-3 mt-4 mb-2">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Historial
+                  </p>
+                </div>
+              )}
+              <div className="flex flex-col gap-1 px-2">
                 {loading && (
-                  <div className="animate-pulse text-center text-gray-400 py-4">
-                    <p>Cargando conversaciones...</p>
+                  <div className="animate-pulse text-center text-gray-500 py-6 text-xs">
+                    Cargando...
                   </div>
                 )}
                 {chats?.docs.map((chat) => (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
                     key={chat.id}
                   >
                     <ChatRow id={chat.id} session={session} />
@@ -74,26 +96,31 @@ function Sidebar({}: Props) {
               </div>
           </div>
           {session && (
-            <div className="border-t border-gray-400 py-3">
-              <div className="chatRow items-center justify-start gap-5">
+            <div className="border-t border-white/10 pt-3 pb-2 px-2 space-y-1">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
                 <img
                   src={session?.user?.image!}
                   alt={session?.user?.name!}
-                  className="h-8 w-8 rounded-sm cursor-pointer hover:opacity-50"
+                  className="h-8 w-8 rounded-lg object-cover"
                 />
-                <p>{session?.user?.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{session?.user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
+                </div>
               </div>
-              <div
-                className="chatRow items-center justify-start gap-5"
+              <button
                 onClick={() => signOut()}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg 
+                         hover:bg-red-500/10 text-gray-400 hover:text-red-400
+                         transition-colors text-sm"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
-                  strokeWidth={1.5}
+                  strokeWidth={2}
                   stroke="currentColor"
-                  className="w-6 h-6"
+                  className="w-4 h-4"
                 >
                   <path
                     strokeLinecap="round"
@@ -101,8 +128,8 @@ function Sidebar({}: Props) {
                     d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"
                   />
                 </svg>
-                <p>Cerrar Sesión</p>
-              </div>
+                <span>Cerrar sesión</span>
+              </button>
             </div>
           )}
         </div>

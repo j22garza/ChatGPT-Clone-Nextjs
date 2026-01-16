@@ -29,14 +29,12 @@ export default async function RootLayout({
           {
             !session ? (<Login/>) :
             (
-              <div className='flex overflow-hidden'>
-                <div className=''>
-                  <Sidebar/>
-                </div>
+              <div className='flex h-screen overflow-hidden'>
+                <Sidebar/>
                 <ClientProvider/>
-                <div className='flex-1'>
+                <main className='flex-1 flex flex-col overflow-hidden'>
                   {children}
-                </div>
+                </main>
               </div>
             )
           }

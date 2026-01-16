@@ -45,79 +45,90 @@ const HomeContent = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-8 px-4 min-h-[90vh]">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] max-w-4xl mx-auto px-4 py-12">
+      {/* Hero Section - Centrado y limpio */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-12"
+        transition={{ duration: 0.5 }}
+        className="text-center mb-16 w-full"
       >
-        <div className="mb-6">
-          <h1 className="text-6xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-blue-300 to-white bg-clip-text text-transparent text-glow">
-            CONNIE IA
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-300 font-light">
-            Tu asistente inteligente para <span className="text-blue-400 font-semibold">Seguridad Industrial</span>
-          </p>
-        </div>
-        <div className="glass-strong max-w-3xl mx-auto p-6 rounded-2xl">
-          <p className="text-gray-200 leading-relaxed">
-            Plataforma de inteligencia artificial que analiza procesos y riesgos laborales según normativas 
-            <span className="text-blue-300 font-semibold"> NOM, OSHA</span> e internacionales, generando análisis 
-            personalizados y conectando empresas con proveedores de seguridad verificados.
-          </p>
-        </div>
+        {/* Logo/Icono */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mb-8 flex justify-center"
+        >
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-blue-600 to-navy-800 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <span className="text-4xl">🤖</span>
+          </div>
+        </motion.div>
+
+        {/* Título Principal */}
+        <h1 className="text-5xl md:text-6xl font-bold mb-4 text-white">
+          <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-white bg-clip-text text-transparent">
+            Connie
+          </span>
+        </h1>
+        
+        {/* Subtítulo */}
+        <p className="text-xl md:text-2xl text-gray-400 font-light mb-8">
+          Tu asistente especializado en <span className="text-blue-400 font-medium">Seguridad Industrial</span>
+        </p>
+
+        {/* Descripción breve */}
+        <p className="text-gray-500 text-base max-w-2xl mx-auto leading-relaxed">
+          Analiza riesgos, cumple normativas NOM y OSHA, y conecta con proveedores verificados de seguridad.
+        </p>
       </motion.div>
 
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Sugerencias - Grid mejorado */}
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 mb-12">
         {suggestions.map((suggestion, index) => (
-          <motion.div
+          <motion.button
             key={index}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.1 }}
+            transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
             onClick={() => handleSuggestionClick(suggestion.prompt)}
-            className="glass hover:glass-strong p-5 rounded-xl cursor-pointer 
-                     transition-all duration-300 group border border-white/10 hover:border-blue-400/50
-                     hover:shadow-glow"
+            className="group relative text-left p-4 rounded-xl 
+                     bg-white/5 hover:bg-white/10 
+                     border border-white/10 hover:border-white/20
+                     transition-all duration-200 ease-out
+                     hover:shadow-lg hover:shadow-blue-500/10
+                     active:scale-[0.98]"
           >
-            <div className="flex items-start space-x-3">
-              <div className="mt-1 p-2 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 group-hover:bg-blue-500/30 flex items-center justify-center transition-colors">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-white mb-2 group-hover:text-blue-300 transition-colors">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-white mb-1 group-hover:text-blue-300 transition-colors">
                   {suggestion.title}
                 </h3>
-                <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
+                <p className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors line-clamp-2">
                   {suggestion.description}
                 </p>
               </div>
             </div>
-          </motion.div>
+          </motion.button>
         ))}
       </div>
 
+      {/* Footer info - Más sutil */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.8 }}
-        className="mt-12 glass-strong p-6 rounded-2xl max-w-2xl text-center"
+        transition={{ duration: 0.5, delay: 0.6 }}
+        className="text-center"
       >
-        <div className="flex items-center justify-center space-x-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-navy-800 rounded-full flex items-center justify-center">
-            <span className="text-2xl">🤖</span>
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white">Hola, soy CONNIE IA</h3>
-            <p className="text-sm text-gray-400">Tu asistente inteligente para seguridad industrial</p>
-          </div>
-        </div>
-        <p className="text-gray-300 leading-relaxed">
-          Te guiaré paso a paso para identificar riesgos, encontrar soluciones y conectar con proveedores verificados.
-          Estoy especializada en EHS y puedo ayudarte con análisis de riesgo, cumplimiento normativo y mucho más.
+        <p className="text-xs text-gray-600">
+          Empieza escribiendo tu pregunta o selecciona una sugerencia arriba
         </p>
       </motion.div>
     </div>
