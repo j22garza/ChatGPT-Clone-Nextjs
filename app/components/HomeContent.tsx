@@ -80,8 +80,28 @@ const HomeContent = () => {
         }
       );
 
-      // Navegar al chat
+      // Navegar al chat primero
       router.push(`/chat/${doc.id}`);
+      
+      // Enviar mensaje a la API después de un pequeño delay para asegurar que la navegación se complete
+      setTimeout(async () => {
+        try {
+          await fetch("/api/askQuestion", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              prompt: prompt,
+              chatId: doc.id,
+              model: "gpt-4o-mini",
+              session: session,
+            }),
+          });
+        } catch (error) {
+          console.error("Error auto-sending message:", error);
+        }
+      }, 1000);
     } catch (error: any) {
       console.error("Error creating chat:", error);
       setLoading(null);

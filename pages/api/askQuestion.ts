@@ -12,15 +12,36 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
+  // Solo permitir POST
+  if (req.method !== "POST") {
+    res.status(405).json({ answer: "Método no permitido" });
+    return;
+  }
+
   const { prompt, chatId, model, session } = req.body;
 
+  console.log("askQuestion API called:", { 
+    hasPrompt: !!prompt, 
+    hasChatId: !!chatId, 
+    hasSession: !!session,
+    model 
+  });
+
   if (!prompt) {
+    console.error("Missing prompt");
     res.status(400).json({ answer: "Por favor proporciona una consulta" });
     return;
   }
 
   if (!chatId) {
+    console.error("Missing chatId");
     res.status(400).json({ answer: "Por favor proporciona un ID de chat válido" });
+    return;
+  }
+
+  if (!session?.user?.email) {
+    console.error("Missing session");
+    res.status(401).json({ answer: "Sesión no válida" });
     return;
   }
 
@@ -50,14 +71,17 @@ export default async function handler(
     }
 
     // Query Connie AI with timeout
-    const queryPromise = query(prompt, chatId, model, previousMessages);
+    console.log("Calling query API...");
+    const queryPromise = query(prompt, chatId, model || "gpt-4o-mini", previousMessages);
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error("Timeout: La consulta tardó demasiado")), 60000)
     );
 
     const response = await Promise.race([queryPromise, timeoutPromise]) as string;
+    console.log("Query API response received, length:", response?.length || 0);
 
     if (!response || response.trim() === "") {
+      console.error("Empty response from query API");
       throw new Error("Connie no pudo generar una respuesta");
     }
 
@@ -72,6 +96,7 @@ export default async function handler(
     };
 
     try {
+      console.log("Saving message to Firebase...");
       await adminDb
         .collection("users")
         .doc(session?.user?.email)
@@ -79,14 +104,17 @@ export default async function handler(
         .doc(chatId)
         .collection("messages")
         .add(message);
+      console.log("Message saved successfully");
     } catch (firebaseError: any) {
       console.error("Error saving message to Firebase:", firebaseError);
       // Still return the response even if Firebase fails
     }
 
+    console.log("Sending success response");
     res.status(200).json({ answer: message.text });
   } catch (error: any) {
     console.error("Error in askQuestion:", error);
+    console.error("Error stack:", error.stack);
     const errorMessage = error.message || "Error al procesar la consulta. Por favor intenta de nuevo.";
     res.status(500).json({ answer: errorMessage });
   }

@@ -70,10 +70,15 @@ function ChatInput({ chatId }: Props) {
           }),
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ answer: "Error desconocido" }));
-          throw new Error(errorData.answer || "Error al procesar la consulta");
+          throw new Error(responseData.answer || "Error al procesar la consulta");
         }
+
+        // Verificar que la respuesta se guardó correctamente
+        // Esperar un momento para que Firebase se actualice
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Toast Notification
         toast.success("Connie ha respondido!", {

@@ -66,9 +66,13 @@ Debes:
 Sé profesional, claro y conciso. Responde en español. Usa formato Markdown para estructurar tus respuestas.`;
 
   try {
-    // Verificar que la API key esté configurada
-    if (!process.env.CHAT_GPT_KEY) {
-      throw new Error("CHAT_GPT_KEY no está configurada en las variables de entorno");
+    // Obtener proveedor activo primero
+    const activeProvider = getActiveProvider();
+    const providerConfig = LLM_PROVIDERS[activeProvider];
+    
+    // Verificar que la API key esté configurada según el proveedor
+    if (!providerConfig.apiKey) {
+      throw new Error(`${providerConfig.name} API key no está configurada. Verifica las variables de entorno.`);
     }
 
     // Detectar si la consulta requiere búsqueda web
@@ -95,10 +99,6 @@ Sé profesional, claro y conciso. Responde en español. Usa formato Markdown par
     if (webSearchResults) {
       enhancedPrompt = `${prompt}\n\n--- Información actualizada de internet ---\n${webSearchResults}\n--- Fin de información web ---\n\nUsa esta información para enriquecer tu respuesta.`;
     }
-    
-    // Obtener proveedor activo
-    const activeProvider = getActiveProvider();
-    const providerConfig = LLM_PROVIDERS[activeProvider];
     
     // Usar modelo del proveedor o el especificado
     const modelToUse = model || providerConfig.model;
