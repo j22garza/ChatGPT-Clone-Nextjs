@@ -2,8 +2,9 @@
 
 import { collection, orderBy, query } from "firebase/firestore";
 import { useSession } from "next-auth/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCollection } from "react-firebase-hooks/firestore";
+import useSWR from "swr";
 
 import Message from "./Message";
 import { firestore } from "../firebase/firebase";
@@ -16,6 +17,11 @@ type Props = {
 function Chat({ chatId }: Props) {
   const { data: session } = useSession();
   const messageEndRef = useRef<null | HTMLDivElement>(null);
+  const [hasAutoSent, setHasAutoSent] = useState(false);
+
+  const { data: model } = useSWR("model", {
+    fallbackData: "gpt-4o-mini",
+  });
 
   const [messages] = useCollection(
     session &&
@@ -28,8 +34,43 @@ function Chat({ chatId }: Props) {
       )
   );
 
+  // Auto-enviar mensaje si hay un mensaje del usuario sin respuesta
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView();
+    if (!messages || hasAutoSent || !session) return;
+
+    const messagesList = messages.docs.map(doc => doc.data());
+    const lastMessage = messagesList[messagesList.length - 1];
+    
+    // Si el último mensaje es del usuario (no es Connie) y no hay respuesta
+    if (lastMessage && lastMessage.user.name !== "Connie") {
+      const hasResponse = messagesList.some(
+        (msg, idx) => idx > messagesList.indexOf(lastMessage) && msg.user.name === "Connie"
+      );
+      
+      if (!hasResponse) {
+        setHasAutoSent(true);
+        // Enviar automáticamente a la API
+        fetch("/api/askQuestion", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: lastMessage.text,
+            chatId,
+            model,
+            session,
+          }),
+        }).catch((error) => {
+          console.error("Error auto-sending message:", error);
+          setHasAutoSent(false);
+        });
+      }
+    }
+  }, [messages, chatId, model, session, hasAutoSent]);
+
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (

@@ -15,7 +15,7 @@ type Props = {
 function ChatInput({ chatId }: Props) {
   const { data: session } = useSession();
   const [prompt, setPrompt] = useState("");
-  const [loading, setIsLoading] = useState(true);
+  const [loading, setIsLoading] = useState(false); // false = listo para enviar, true = procesando
 
   const { data: model } = useSWR("model", {
     fallbackData: "gpt-4o-mini",
@@ -28,9 +28,10 @@ function ChatInput({ chatId }: Props) {
       if (!prompt && !session) return;
 
       const input = prompt.trim();
+      if (!input) return;
+      
       setPrompt("");
-
-      setIsLoading(false);
+      setIsLoading(true); // Iniciar carga
 
       const message: Message = {
         text: input,
@@ -79,18 +80,18 @@ function ChatInput({ chatId }: Props) {
           id: notification,
         });
 
-        setIsLoading(true);
+        setIsLoading(false); // Terminar carga
       } catch (fetchError: any) {
         console.error("Error fetching response:", fetchError);
         toast.error(fetchError.message || "Error al obtener respuesta de Connie", {
           id: notification,
         });
-        setIsLoading(true);
+        setIsLoading(false); // Terminar carga incluso en error
       }
     } catch (error: any) {
       console.error("Error in generateResponse:", error);
       toast.error("Error al enviar el mensaje. Por favor intenta de nuevo.");
-      setIsLoading(true);
+      setIsLoading(false); // Terminar carga
     }
   };
 
@@ -112,15 +113,14 @@ function ChatInput({ chatId }: Props) {
                 e.target.style.height = 'auto';
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
               }}
-              disabled={!session || !loading}
+              disabled={!session || loading}
               onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (prompt.trim() && session && loading) {
+                  if (prompt.trim() && session && !loading) {
                     const form = e.currentTarget.closest('form');
                     if (form) {
-                      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-                      form.dispatchEvent(submitEvent);
+                      form.requestSubmit();
                     }
                   }
                 }
@@ -135,7 +135,7 @@ function ChatInput({ chatId }: Props) {
 
           <button
             type="submit"
-            disabled={!prompt.trim() || !session || !loading}
+            disabled={!prompt.trim() || !session || loading}
             className="flex-shrink-0 w-10 h-10 rounded-xl 
                      bg-blue-600 hover:bg-blue-500 active:bg-blue-700
                      disabled:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed
@@ -143,9 +143,9 @@ function ChatInput({ chatId }: Props) {
                      transition-all duration-200 ease-out
                      shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40
                      active:scale-95"
-            title={loading ? "Enviar mensaje" : "Connie está pensando..."}
+            title={loading ? "Connie está pensando..." : "Enviar mensaje"}
           >
-            {loading ? (
+            {!loading ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"

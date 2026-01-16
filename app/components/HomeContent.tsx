@@ -1,10 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { firestore } from "../firebase/firebase";
+import { useState } from "react";
 
 const HomeContent = () => {
   const router = useRouter();
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState<string | null>(null);
 
   const suggestions = [
     {
@@ -39,9 +45,47 @@ const HomeContent = () => {
     }
   ];
 
-  const handleSuggestionClick = (prompt: string) => {
-    // Create new chat and navigate
-    router.push(`/chat/new?prompt=${encodeURIComponent(prompt)}`);
+  const handleSuggestionClick = async (prompt: string) => {
+    if (!session) return;
+    
+    try {
+      setLoading(prompt);
+      
+      // Crear nuevo chat
+      const doc = await addDoc(
+        collection(firestore, `users/${session.user?.email}/chats`),
+        {
+          userId: session.user?.email,
+          userEmail: session.user?.email,
+          createdAt: serverTimestamp(),
+        }
+      );
+
+      if (!doc.id) {
+        console.error("No se pudo crear el chat");
+        return;
+      }
+
+      // Crear mensaje inicial con el prompt
+      await addDoc(
+        collection(firestore, `users/${session.user?.email}/chats/${doc.id}/messages`),
+        {
+          text: prompt,
+          createdAt: serverTimestamp(),
+          user: {
+            name: session.user?.name!,
+            email: session.user?.email!,
+            avatar: session.user?.image || `https://ui-avatars.com/api/?name=${session.user?.name!}`,
+          },
+        }
+      );
+
+      // Navegar al chat
+      router.push(`/chat/${doc.id}`);
+    } catch (error: any) {
+      console.error("Error creating chat:", error);
+      setLoading(null);
+    }
   };
 
   return (
@@ -92,12 +136,14 @@ const HomeContent = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
             onClick={() => handleSuggestionClick(suggestion.prompt)}
+            disabled={loading === suggestion.prompt || !session}
             className="group relative text-left p-4 rounded-xl 
                      bg-white/5 hover:bg-white/10 
                      border border-white/10 hover:border-white/20
                      transition-all duration-200 ease-out
                      hover:shadow-lg hover:shadow-blue-500/10
-                     active:scale-[0.98]"
+                     active:scale-[0.98]
+                     disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex-shrink-0">
