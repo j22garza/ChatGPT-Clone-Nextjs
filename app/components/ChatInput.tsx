@@ -24,88 +24,82 @@ function ChatInput({ chatId }: Props) {
   const generateResponse = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!session) {
+      toast.error("Por favor inicia sesión");
+      return;
+    }
+
+    const input = prompt.trim();
+    if (!input) {
+      toast.error("Por favor escribe un mensaje");
+      return;
+    }
+    
+    setPrompt("");
+    setIsLoading(true);
+
+    const notification = toast.loading("Connie está analizando...");
+
     try {
-      if (!prompt && !session) return;
-
-      const input = prompt.trim();
-      if (!input) return;
-      
-      setPrompt("");
-      setIsLoading(true); // Iniciar carga
-
+      // Guardar mensaje del usuario primero
       const message: Message = {
         text: input,
         createdAt: serverTimestamp(),
         user: {
-          name: session?.user?.name!,
-          email: session?.user?.email!,
+          name: session.user?.name!,
+          email: session.user?.email!,
           avatar:
-            session?.user?.image ||
-            `https://ui-avatars.com/api/?name=${session?.user?.name!}`,
+            session.user?.image ||
+            `https://ui-avatars.com/api/?name=${session.user?.name!}`,
         },
       };
 
       await addDoc(
         collection(
           firestore,
-          `users/${session?.user?.email!}/chats/${chatId}/messages`
+          `users/${session.user?.email!}/chats/${chatId}/messages`
         ),
         message
       );
 
-      // loading
-      const notification = toast.loading("Connie está analizando...");
+      console.log("[ChatInput] User message saved, calling API...");
 
-      try {
-        console.log("Sending request to /api/askQuestion", { chatId, hasPrompt: !!input, hasSession: !!session });
-        
-        const response = await fetch("/api/askQuestion", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: input,
-            chatId,
-            model: model || "gpt-4o-mini",
-            session,
-          }),
-        });
+      // Llamar a la API
+      const response = await fetch("/api/askQuestion", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: input,
+          chatId,
+          model: model || "gpt-4o-mini",
+          session,
+        }),
+      });
 
-        console.log("Response status:", response.status);
+      const responseData = await response.json();
 
-        const responseData = await response.json();
-        console.log("Response data:", { hasAnswer: !!responseData.answer, answerLength: responseData.answer?.length });
-
-        if (!response.ok) {
-          const errorMsg = responseData.answer || `Error ${response.status}: ${response.statusText}`;
-          console.error("API error:", errorMsg);
-          throw new Error(errorMsg);
-        }
-
-        // Verificar que la respuesta se guardó correctamente
-        // Esperar un momento para que Firebase se actualice
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Toast Notification
-        toast.success("Connie ha respondido!", {
-          id: notification,
-        });
-
-        setIsLoading(false); // Terminar carga
-      } catch (fetchError: any) {
-        console.error("Error fetching response:", fetchError);
-        const errorMessage = fetchError.message || "Error al obtener respuesta de Connie. Verifica la consola para más detalles.";
-        toast.error(errorMessage, {
-          id: notification,
-          duration: 5000,
-        });
-        setIsLoading(false); // Terminar carga incluso en error
+      if (!response.ok) {
+        throw new Error(responseData.answer || `Error ${response.status}: ${response.statusText}`);
       }
+
+      // Esperar un momento para que Firebase se actualice y muestre la respuesta
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      toast.success("Connie ha respondido!", {
+        id: notification,
+      });
+
+      setIsLoading(false);
+      
     } catch (error: any) {
-      console.error("Error in generateResponse:", error);
-      toast.error("Error al enviar el mensaje. Por favor intenta de nuevo.");
-      setIsLoading(false); // Terminar carga
+      console.error("[ChatInput] Error:", error);
+      toast.error(error.message || "Error al procesar tu mensaje. Intenta de nuevo.", {
+        id: notification,
+        duration: 5000,
+      });
+      setIsLoading(false);
     }
   };
 
