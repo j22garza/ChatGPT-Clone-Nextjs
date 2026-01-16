@@ -70,10 +70,16 @@ Sé profesional, claro y conciso. Responde en español. Usa formato Markdown par
     const activeProvider = getActiveProvider();
     const providerConfig = LLM_PROVIDERS[activeProvider];
     
+    console.log(`[queryApi] Using provider: ${activeProvider}, model: ${providerConfig.model}`);
+    
     // Verificar que la API key esté configurada según el proveedor
-    if (!providerConfig.apiKey) {
-      throw new Error(`${providerConfig.name} API key no está configurada. Verifica las variables de entorno.`);
+    if (!providerConfig.apiKey || providerConfig.apiKey.trim() === '') {
+      const errorMsg = `${providerConfig.name} API key no está configurada. Verifica las variables de entorno.`;
+      console.error(`[queryApi] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
+    
+    console.log(`[queryApi] API key found for ${activeProvider}`);
 
     // Detectar si la consulta requiere búsqueda web
     const needsWebSearch = 
@@ -107,13 +113,17 @@ Sé profesional, claro y conciso. Responde en español. Usa formato Markdown par
     // Para EHS, 1500 tokens es suficiente para respuestas completas
     let response;
     
+    console.log(`[queryApi] Calling ${activeProvider} API with model: ${modelToUse}`);
+    
     if (activeProvider === 'groq' && providerConfig.apiKey) {
       // Groq usa endpoint compatible con OpenAI
-      const groqClient = new (await import("openai")).OpenAI({
+      const { OpenAI: GroqOpenAI } = await import("openai");
+      const groqClient = new GroqOpenAI({
         apiKey: providerConfig.apiKey,
         baseURL: providerConfig.endpoint,
       });
       
+      console.log(`[queryApi] Making Groq API call...`);
       response = await groqClient.chat.completions.create({
         model: modelToUse,
         messages: [
@@ -124,8 +134,10 @@ Sé profesional, claro y conciso. Responde en español. Usa formato Markdown par
         temperature: 0.7,
         max_tokens: 1500,
       });
+      console.log(`[queryApi] Groq response received`);
     } else {
       // OpenAI por defecto (o fallback)
+      console.log(`[queryApi] Making OpenAI API call...`);
       response = await openai.chat.completions.create({
         model: modelToUse,
         messages: [
@@ -134,15 +146,34 @@ Sé profesional, claro y conciso. Responde en español. Usa formato Markdown par
           { role: "user", content: enhancedPrompt }
         ],
         temperature: 0.7,
-        max_tokens: 1500, // Reducido de 2000 para mayor velocidad
+        max_tokens: 1500,
         stream: false,
       });
+      console.log(`[queryApi] OpenAI response received`);
     }
 
-    return response.choices[0].message.content || "Connie no pudo responder en este momento.";
+    const content = response.choices[0]?.message?.content;
+    if (!content || content.trim() === '') {
+      console.error(`[queryApi] Empty response from ${activeProvider}`);
+      throw new Error(`Respuesta vacía de ${providerConfig.name}`);
+    }
+    
+    console.log(`[queryApi] Success! Response length: ${content.length}`);
+    return content;
   } catch (err: any) {
-    console.error(`Connie unable to find an answer: ${err.message}`);
-    return "Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.";
+    console.error(`[queryApi] Error: ${err.message}`);
+    console.error(`[queryApi] Error stack:`, err.stack);
+    
+    // Retornar error más descriptivo
+    if (err.message.includes('API key')) {
+      return `Error de configuración: ${err.message}. Por favor verifica las variables de entorno en Vercel.`;
+    }
+    
+    if (err.message.includes('timeout') || err.message.includes('Timeout')) {
+      return "La consulta tardó demasiado en procesarse. Por favor intenta de nuevo con una pregunta más corta.";
+    }
+    
+    return `Lo siento, hubo un error al procesar tu consulta: ${err.message}. Por favor intenta de nuevo.`;
   }
 };
 

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { firestore } from "../firebase/firebase";
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 const HomeContent = () => {
   const router = useRouter();
@@ -86,7 +87,9 @@ const HomeContent = () => {
       // Enviar mensaje a la API después de un pequeño delay para asegurar que la navegación se complete
       setTimeout(async () => {
         try {
-          await fetch("/api/askQuestion", {
+          console.log("Auto-sending message from suggestion:", { chatId: doc.id, promptLength: prompt.length });
+          
+          const response = await fetch("/api/askQuestion", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -98,10 +101,20 @@ const HomeContent = () => {
               session: session,
             }),
           });
-        } catch (error) {
+
+          const data = await response.json();
+          
+          if (!response.ok) {
+            console.error("Error auto-sending message:", data.answer || response.statusText);
+            toast.error(data.answer || "Error al enviar mensaje automático");
+          } else {
+            console.log("Message auto-sent successfully");
+          }
+        } catch (error: any) {
           console.error("Error auto-sending message:", error);
+          toast.error("Error al enviar mensaje automático: " + error.message);
         }
-      }, 1000);
+      }, 1500);
     } catch (error: any) {
       console.error("Error creating chat:", error);
       setLoading(null);

@@ -31,14 +31,28 @@ export const LLM_PROVIDERS: Record<LLMProvider, LLMConfig> = {
 
 // Obtener el proveedor activo desde variables de entorno
 export function getActiveProvider(): LLMProvider {
-  const provider = (process.env.LLM_PROVIDER || 'openai').toLowerCase() as LLMProvider;
+  // Si hay LLM_PROVIDER configurado, intentar usarlo
+  const configuredProvider = process.env.LLM_PROVIDER?.toLowerCase() as LLMProvider;
   
-  // Verificar que el proveedor tenga API key configurada
-  if (LLM_PROVIDERS[provider]?.apiKey) {
-    return provider;
+  if (configuredProvider && LLM_PROVIDERS[configuredProvider]?.apiKey) {
+    console.log(`Using configured provider: ${configuredProvider}`);
+    return configuredProvider;
   }
   
-  // Fallback a OpenAI si no hay API key del proveedor seleccionado
+  // Si no hay proveedor configurado o no tiene API key, detectar automáticamente
+  // Prioridad: Groq (más rápido) > OpenAI
+  if (process.env.GROQ_API_KEY && LLM_PROVIDERS.groq.apiKey) {
+    console.log("Auto-detected: Using Groq (has API key)");
+    return 'groq';
+  }
+  
+  if (process.env.CHAT_GPT_KEY && LLM_PROVIDERS.openai.apiKey) {
+    console.log("Auto-detected: Using OpenAI (has API key)");
+    return 'openai';
+  }
+  
+  // Fallback final
+  console.warn("No API keys found, defaulting to OpenAI");
   return 'openai';
 }
 

@@ -57,6 +57,8 @@ function ChatInput({ chatId }: Props) {
       const notification = toast.loading("Connie está analizando...");
 
       try {
+        console.log("Sending request to /api/askQuestion", { chatId, hasPrompt: !!input, hasSession: !!session });
+        
         const response = await fetch("/api/askQuestion", {
           method: "POST",
           headers: {
@@ -65,20 +67,25 @@ function ChatInput({ chatId }: Props) {
           body: JSON.stringify({
             prompt: input,
             chatId,
-            model,
+            model: model || "gpt-4o-mini",
             session,
           }),
         });
 
+        console.log("Response status:", response.status);
+
         const responseData = await response.json();
+        console.log("Response data:", { hasAnswer: !!responseData.answer, answerLength: responseData.answer?.length });
 
         if (!response.ok) {
-          throw new Error(responseData.answer || "Error al procesar la consulta");
+          const errorMsg = responseData.answer || `Error ${response.status}: ${response.statusText}`;
+          console.error("API error:", errorMsg);
+          throw new Error(errorMsg);
         }
 
         // Verificar que la respuesta se guardó correctamente
         // Esperar un momento para que Firebase se actualice
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Toast Notification
         toast.success("Connie ha respondido!", {
@@ -88,8 +95,10 @@ function ChatInput({ chatId }: Props) {
         setIsLoading(false); // Terminar carga
       } catch (fetchError: any) {
         console.error("Error fetching response:", fetchError);
-        toast.error(fetchError.message || "Error al obtener respuesta de Connie", {
+        const errorMessage = fetchError.message || "Error al obtener respuesta de Connie. Verifica la consola para más detalles.";
+        toast.error(errorMessage, {
           id: notification,
+          duration: 5000,
         });
         setIsLoading(false); // Terminar carga incluso en error
       }
