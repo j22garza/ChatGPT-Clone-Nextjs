@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 type Props = {};
 
