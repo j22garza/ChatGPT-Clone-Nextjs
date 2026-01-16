@@ -18,7 +18,7 @@ function ChatInput({ chatId }: Props) {
   const [loading, setIsLoading] = useState(true);
 
   const { data: model } = useSWR("model", {
-    fallbackData: "text-davinci-003",
+    fallbackData: "gpt-4o-mini",
   });
 
   const generateResponse = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -53,7 +53,7 @@ function ChatInput({ chatId }: Props) {
       );
 
       // loading
-      const notification = toast.loading("Conexus is thinking...");
+      const notification = toast.loading("Connie está analizando...");
 
       await fetch("/api/askQuestion", {
         method: "POST",
@@ -67,8 +67,8 @@ function ChatInput({ chatId }: Props) {
           session,
         }),
       }).then(() => {
-        // Tost Notification
-        toast.success("Conexus has responded!", {
+        // Toast Notification
+        toast.success("Connie ha respondido!", {
           id: notification,
         });
 
@@ -80,33 +80,36 @@ function ChatInput({ chatId }: Props) {
   };
 
   return (
-    <div className="flex justify-center items-center">
-      <div className="bg-[#40414F] text-gray-200 rounded-lg text-base w-[95%] md:max-w-[70%] mb-4">
-        <form onSubmit={generateResponse} className="px-4 py-3 space-x-5 flex">
-          <input
-            type="text"
-            placeholder="Type your message here..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            disabled={!session}
-            className={`bg-transparent focus:outline-none flex-1 disabled:cursor-not-allowed disabled:text-gray-300 ${
-              !loading && "animate-pulse"
-            }`}
-          />
+    <div className="flex justify-center items-center px-4 pb-4">
+      <div className="glass-strong text-gray-200 rounded-2xl text-base w-full md:max-w-3xl shadow-metallic border border-white/20">
+        <form onSubmit={generateResponse} className="px-4 py-3 space-x-3 flex items-end">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Pregunta a Connie sobre seguridad industrial, normativas, riesgos..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              disabled={!session}
+              className={`w-full bg-transparent focus:outline-none disabled:cursor-not-allowed disabled:text-gray-500 
+                text-white placeholder-gray-400 ${
+                !loading && "animate-pulse"
+              }`}
+            />
+          </div>
 
           {loading ? (
             <button
               type="submit"
               disabled={!prompt || !session}
-              className="bg-[#11A37F] hover:opacity-70 text-white font-bold px-3 py-2 rounded-lg disabled:bg-[#40414F] disabled:cursor-not-allowed"
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 p-3"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                strokeWidth={1.5}
+                strokeWidth={2}
                 stroke="currentColor"
-                className="w-5 h-5 -rotate-45"
+                className="w-5 h-5"
               >
                 <path
                   strokeLinecap="round"
@@ -119,15 +122,15 @@ function ChatInput({ chatId }: Props) {
             <button
               type="submit"
               disabled={!session}
-              className="bg-[#11A37F] hover:opacity-70 text-white font-bold px-3 py-2 rounded-lg disabled:bg-[#40414F] disabled:cursor-not-allowed"
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 p-3"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                strokeWidth={1.5}
+                strokeWidth={2}
                 stroke="currentColor"
-                className="w-6 h-6 animate-spin"
+                className="w-5 h-5 animate-spin"
               >
                 <path
                   strokeLinecap="round"

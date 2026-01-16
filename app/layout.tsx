@@ -11,8 +11,8 @@ import { authOption } from '../pages/api/auth/[...nextauth]'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Conexus',
-  description: 'A Conexus clone',
+  title: 'Conexus - IA Connie para EHS',
+  description: 'Plataforma de inteligencia artificial especializada en Seguridad Industrial, Salud Ocupacional y Medio Ambiente. Connie, tu asistente virtual EHS.',
 }
 
 export default async function RootLayout({
@@ -24,7 +24,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#343541]`}>
+      <body className={`${inter.className} min-h-screen`}>
         <SessionProvider session={session}>
           {
             !session ? (<Login/>) :

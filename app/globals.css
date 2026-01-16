@@ -2,12 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-    .infoText {
-      @apply p-4 bg-gray-700/50 rounded-lg w-auto;
-    }
-  
-    .chatRow {
-      @apply rounded px-3 py-3 text-sm flex items-center justify-center hover:bg-[#51545bb0] cursor-pointer text-gray-300 transition-all duration-200 ease-out;
-    }
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-navy-950 via-navy-900 to-navy-950 text-white;
+    background-attachment: fixed;
   }
+}
+
+@layer components {
+  .infoText {
+    @apply p-4 bg-white/10 backdrop-blur-md rounded-lg w-auto border border-white/20;
+  }
+
+  .chatRow {
+    @apply rounded-lg px-4 py-3 text-sm flex items-center justify-center 
+           bg-white/5 hover:bg-white/10 backdrop-blur-sm 
+           border border-white/10 hover:border-white/20
+           cursor-pointer text-gray-200 transition-all duration-300 ease-out
+           shadow-glass hover:shadow-metallic;
+  }
+
+  .glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 
+           shadow-glass;
+  }
+
+  .glass-strong {
+    @apply bg-white/15 backdrop-blur-lg border border-white/30 
+           shadow-metallic;
+  }
+
+  .metallic-blue {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+    @apply backdrop-blur-lg border border-blue-400/30 shadow-metallic;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-navy-800 
+           hover:from-blue-500 hover:to-navy-700
+           text-white font-semibold px-6 py-3 rounded-lg
+           transition-all duration-300 shadow-glow hover:shadow-lg
+           border border-blue-400/30;
+  }
+
+  .btn-secondary {
+    @apply glass hover:glass-strong text-white font-medium px-4 py-2 rounded-lg
+           transition-all duration-300;
+  }
+}

@@ -1,11 +1,11 @@
-# ChatGPT Clone
+# Conexus - Connie IA para EHS
 
-A ChatGPT clone created with NextJs, TailwindCSS, Typescript, Firebase for Google-Authentication & Realtime Database, Vercel SWR for Data Fetching and ChatGPT API.
+Plataforma de inteligencia artificial especializada en EHS (Environmental, Health, and Safety) desarrollada con NextJs, TailwindCSS, TypeScript, Firebase y OpenAI API.
 
 https://github.com/chirag-23/ChatGPT-Clone-Nextjs/assets/76790227/f0bd43a7-3eeb-4ee4-a877-d93fcaa73c98
 
 ## Live Demo 
-<a href='https://chatai-1000.vercel.app/' target="_blank">ChatGPT Clone</a>
+<a href='https://conexus-connie.vercel.app/' target="_blank">Conexus - Connie IA</a>
 
 ## Key Features
 * <b>Google Login/Signup:</b> Seamlessly sign in or sign up using your Google account for a hassle-free user experience.
@@ -14,11 +14,15 @@ https://github.com/chirag-23/ChatGPT-Clone-Nextjs/assets/76790227/f0bd43a7-3eeb-
 
 * <b>Log Out Button:</b> Conveniently located at the bottom of the sidebar, the log-out button allows you to sign out with a single click.
 
-* <b>Interactive Input Bar:</b> Experience an input bar that mimics the original ChatGPT, ensuring an engaging and familiar chat interface.
+* <b>Asistente Virtual Especializado:</b> Connie, tu asistente IA especializado en EHS, te ayuda con seguridad industrial, salud ocupacional y medio ambiente.
 
-* <b>Real-time Updates:</b> Stay informed with real-time data fetching using React-hot-toast notifications, keeping you up-to-date with the latest information.
+* <b>Análisis de Riesgos:</b> Identifica riesgos industriales y ambientales con análisis personalizados basados en normativas NOM, OSHA e internacionales.
 
-* <b>ChatGPT API Integration:</b> Engage in real-time interactions with the ChatGPT API, enabling dynamic and responsive conversations.
+* <b>Conexión con Proveedores:</b> Encuentra proveedores verificados de equipos y servicios de seguridad.
+
+* <b>Actualizaciones en Tiempo Real:</b> Notificaciones en tiempo real con React-hot-toast para mantenerte informado.
+
+* <b>Integración OpenAI:</b> Potenciado por GPT-4o-mini para respuestas rápidas y precisas.
 
 ## Technologies Used
 This project was created using the following technologies -

@@ -15,37 +15,59 @@ export default async function handler(
   const { prompt, chatId, model, session } = req.body;
 
   if (!prompt) {
-    res.status(400).json({ answer: "Please Provide a prompt" });
+    res.status(400).json({ answer: "Por favor proporciona una consulta" });
     return;
   }
 
   if (!chatId) {
-    res.status(400).json({ answer: "Please provide a valid chat Id" });
+    res.status(400).json({ answer: "Por favor proporciona un ID de chat válido" });
     return;
   }
 
-  // ChatGpt Query
+  try {
+    // Get previous messages for context
+    const messagesRef = adminDb
+      .collection("users")
+      .doc(session?.user?.email)
+      .collection("chats")
+      .doc(chatId)
+      .collection("messages")
+      .orderBy("createdAt", "asc")
+      .limit(10);
 
-  const response = await query(prompt, chatId, model);
+    const messagesSnapshot = await messagesRef.get();
+    const previousMessages = messagesSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        role: data.user.name === "Connie" ? "assistant" : "user",
+        content: data.text
+      };
+    });
 
-  const message: Message = {
-    text: response || "Conexus unable to answer that!",
-    createdAt: admin.firestore.Timestamp.now(),
-    user: {
-      name: "Conexus",
-      email: "Conexus",
-      avatar:
-        "https://drive.google.com/uc?export=download&id=1ikaBBU-OsBSHkleHQmf15ww0vgX-A0Kz",
-    },
-  };
+    // Query Connie AI
+    const response = await query(prompt, chatId, model, previousMessages);
 
-  await adminDb
-    .collection("users")
-    .doc(session?.user?.email)
-    .collection("chats")
-    .doc(chatId)
-    .collection("messages")
-    .add(message);
+    const message: Message = {
+      text: response || "Lo siento, Connie no pudo responder en este momento.",
+      createdAt: admin.firestore.Timestamp.now(),
+      user: {
+        name: "Connie",
+        email: "connie@conexus.ai",
+        avatar: "https://ui-avatars.com/api/?name=Connie&background=1e3a8a&color=fff&bold=true",
+      },
+    };
 
-  res.status(200).json({ answer: message.text });
+    await adminDb
+      .collection("users")
+      .doc(session?.user?.email)
+      .collection("chats")
+      .doc(chatId)
+      .collection("messages")
+      .add(message);
+
+    res.status(200).json({ answer: message.text });
+  } catch (error: any) {
+    console.error("Error in askQuestion:", error);
+    res.status(500).json({ answer: "Error al procesar la consulta. Por favor intenta de nuevo." });
+  }
 }

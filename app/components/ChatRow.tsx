@@ -42,7 +42,7 @@ function ChatRow({ id, session }: Props) {
   return (
     <Link
       href={`/chat/${id}`}
-      className={`chatRow justify-center ${active && "bg-[#51545bb0]"}`}
+      className={`chatRow justify-start ${active && "glass-strong border-blue-400/50"}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -59,7 +59,7 @@ function ChatRow({ id, session }: Props) {
         />
       </svg>
       <p className="flex-1 truncate">
-        {messages?.docs[messages?.docs.length - 2]?.data().text || "New Chat"}
+        {messages?.docs[messages?.docs.length - 2]?.data().text || "Nueva Conversación"}
       </p>
       {
         active && 
