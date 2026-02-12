@@ -1,7 +1,11 @@
 import query from "@/app/utils/queryApi";
 import type { NextApiRequest, NextApiResponse } from "next";
 
-type Data = { answer: string };
+type Data = {
+  answer: string;
+  stepIndex?: number;
+  state?: string;
+};
 
 export default async function handler(
   req: NextApiRequest,
