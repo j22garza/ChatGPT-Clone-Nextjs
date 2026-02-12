@@ -59,3 +59,18 @@ export function enforceOneQuestion(
 
   return beforeQuestion + "\n\n" + intro + chosen.question + outro;
 }
+
+/**
+ * Mantiene solo una pregunta (la última por defecto) y convierte el resto en afirmaciones.
+ * Para usar en modo exploración/pre-análisis (readiness LOW o MEDIUM).
+ */
+export function enforceSingleQuestion(response: string): string {
+  const questions = extractQuestions(response);
+  if (questions.length <= 1) return response;
+  const chosen = questions[questions.length - 1];
+  const beforeQuestion = response.slice(0, chosen.index).trim();
+  const afterQuestion = response.slice(chosen.index + chosen.question.length).trim();
+  const intro = "**Para avanzar, responde solo esta pregunta:**\n\n";
+  const rest = beforeQuestion + (afterQuestion ? "\n\n--- *Contexto adicional:* ---\n" + afterQuestion : "");
+  return rest ? rest + "\n\n" + intro + chosen.question : intro + chosen.question;
+}

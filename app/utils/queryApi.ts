@@ -7,7 +7,8 @@ import {
 } from "./llmProviders";
 import { deriveStateFromHistory, type ConversationState } from "./stateDerivation";
 import { computeRiskScore, formatRiskContextForPrompt } from "./riskScoring";
-import { enforceOneQuestion } from "./enforceOneQuestion";
+import { enforceOneQuestion, enforceSingleQuestion } from "./enforceOneQuestion";
+import { getConversationReadiness } from "./conversationReadiness";
 
 const searchWeb = async (query: string): Promise<string> => {
   try {
@@ -136,6 +137,21 @@ const OUTPUT_CONTRACT = `
 6) Próximo paso: exactamente 1 pregunta para afinar o confirmar.
 `;
 
+const EXPLORATION_INSTRUCTION = `
+[INSTRUCCIÓN OBLIGATORIA — MODO EXPLORACIÓN]
+NO generes tablas. NO generes análisis numérico ni scoring P×E×C. NO inventes números.
+Debes hacer UNA sola pregunta estratégica y explicar brevemente por qué esa pregunta es importante para el análisis.
+No generes resumen ejecutivo ni listas de riesgos todavía.
+`;
+
+const PREANALYSIS_INSTRUCTION = `
+[INSTRUCCIÓN OBLIGATORIA — PRE-ANÁLISIS]
+NO calcules score P×E×C todavía. NO generes tabla de riesgos con números.
+Puedes listar 2–3 riesgos típicos como "hipótesis" (sin puntaje).
+Debes hacer UNA sola pregunta clave para poder pasar a análisis completo (ej. frecuencia, personas expuestas, consecuencia).
+No generes resumen ejecutivo formal ni tabla con columnas P/E/C/Score.
+`;
+
 function addWebCitationReminder(hasWebBlock: boolean, webBlockText: string): string {
   if (!hasWebBlock) return "";
   const hasUrls = /URL:\s*\S+/.test(webBlockText);
@@ -166,17 +182,22 @@ const query = async (
 
   const messageHistory = messages.slice(-10);
   const derived = deriveStateFromHistory(messageHistory);
-  const riskResult = computeRiskScore(messageHistory, prompt);
+  const readiness = getConversationReadiness(messageHistory, prompt);
+  const riskResult = readiness.readinessLevel === "HIGH" ? computeRiskScore(messageHistory, prompt) : null;
 
   let userContent = prompt;
   if (webSearchResults) {
     userContent = `${prompt}\n\n--- Información actualizada de internet ---\n${webSearchResults}\n--- Fin de información web ---\n\nUsa esta información para enriquecer tu respuesta.`;
     userContent += addWebCitationReminder(true, webSearchResults);
   }
-  if (riskResult) {
-    userContent += "\n\n" + formatRiskContextForPrompt(riskResult);
+  if (readiness.readinessLevel === "HIGH") {
+    if (riskResult) userContent += "\n\n" + formatRiskContextForPrompt(riskResult);
+    userContent += OUTPUT_CONTRACT;
+  } else if (readiness.readinessLevel === "LOW") {
+    userContent += "\n\n" + EXPLORATION_INSTRUCTION;
+  } else {
+    userContent += "\n\n" + PREANALYSIS_INSTRUCTION;
   }
-  userContent += OUTPUT_CONTRACT;
 
   const llm = new ChatOpenAI({
     modelName: modelToUse,
@@ -186,7 +207,7 @@ const query = async (
     ...(config.endpoint && { configuration: { baseURL: config.endpoint } }),
   });
 
-  console.log(`[queryApi] provider: ${provider}, model: ${modelToUse}, state: ${derived.state}`);
+  console.log(`[queryApi] provider: ${provider}, model: ${modelToUse}, state: ${derived.state}, readiness: ${readiness.readinessLevel}`);
 
   try {
     const langchainMessages = [
@@ -204,7 +225,11 @@ const query = async (
       throw new Error("Respuesta vacía del modelo");
     }
 
-    content = enforceOneQuestion(content, derived.state);
+    if (readiness.readinessLevel === "HIGH") {
+      content = enforceOneQuestion(content, derived.state);
+    } else {
+      content = enforceSingleQuestion(content);
+    }
 
     console.log(`[queryApi] OK, length: ${content.length}`);
     return {

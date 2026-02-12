@@ -70,3 +70,23 @@ Objetivo: validar el flujo conversacional (una pregunta a la vez, estado derivad
 - [ ] Si hay bloque “Información actualizada de internet”: cita tipo [[n]](url) o “Fuente web (sin URL)”.  
 - [ ] Chips y “Progreso: Paso N/8” visibles y coherentes.  
 - [ ] Compatibilidad con Groq y OpenAI sin errores.
+
+---
+
+## Ejemplos por nivel de preparación (readiness)
+
+### Usuario: "Somos del sector construcción."
+
+- **readiness:** LOW (solo industria, sin tarea específica ni exposición).
+- **Comportamiento:** Modo exploración. Se inyecta `EXPLORATION_INSTRUCTION`.
+- **Respuesta esperada (ejemplo):** Sin tablas, sin scoring, sin resumen ejecutivo. Una sola pregunta, por ejemplo:
+  - *"Para poder orientarte bien, necesito acotar el alcance. ¿Cuál es la tarea o actividad más crítica en la que quieres enfocar el análisis de riesgo (por ejemplo: trabajo en alturas, excavaciones, izaje, manejo de materiales)?"*
+  - O: *"¿En qué proceso o tarea específica quieres que enfoquemos el análisis (ej. andamios, excavación, soldadura en obra)?"*
+- **No debe incluir:** Tabla de riesgos, columnas P/E/C/Score, resumen ejecutivo, números inventados.
+
+### Usuario: "Hacemos mantenimiento en altura semanalmente con 5 trabajadores."
+
+- **readiness:** HIGH (industria implícita por “mantenimiento en altura”, tarea clara, frecuencia “semanalmente”, exposición “5 trabajadores”).
+- **Comportamiento:** Modo análisis. Se inyecta `OUTPUT_CONTRACT` y se permite scoring si hay P/E/C.
+- **Respuesta esperada (ejemplo):** Resumen ejecutivo, tabla de riesgos (Proceso/Tarea | Peligro | P | E | C | Score | Nivel | Controles), controles por jerarquía, soluciones, criterios de proveedores o tipos, y próximo paso con 1 pregunta.
+- **Puede incluir:** Tabla con top 3–5 riesgos (caída, golpe por objeto, atrapamiento, etc.), niveles según P×E×C cuando el usuario confirme o se estimen, controles inmediatos y estructurales.
