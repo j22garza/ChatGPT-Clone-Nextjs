@@ -12,27 +12,34 @@ const LEVEL_COLUMN_NAMES = /nivel|level|riesgo/i;
 const LEVEL_CHIP: Record<string, { label: string; className: string }> = {
   bajo: { label: "Bajo", className: "bg-emerald-500/20 text-emerald-300 border-emerald-400/40" },
   medio: { label: "Medio", className: "bg-amber-500/20 text-amber-300 border-amber-400/40" },
-  alto: { label: "Alto", className: "bg-orange-500/20 text-orange-300 border-orange-400/40" },
+  moderado: { label: "Moderado", className: "bg-amber-500/20 text-amber-300 border-amber-400/40" },
+  "medio-alto": { label: "Medio-Alto", className: "bg-orange-500/20 text-orange-300 border-orange-400/40" },
+  medioalto: { label: "Medio-Alto", className: "bg-orange-500/20 text-orange-300 border-orange-400/40" },
+  alto: { label: "Alto", className: "bg-red-500/20 text-red-300 border-red-400/40" },
   crítico: { label: "Crítico", className: "bg-red-500/20 text-red-300 border-red-400/40" },
   critico: { label: "Crítico", className: "bg-red-500/20 text-red-300 border-red-400/40" },
 };
 
 function getLevelChip(value: string): React.ReactNode {
-  const v = value.trim().toLowerCase();
-  const chip = LEVEL_CHIP[v] ?? Object.entries(LEVEL_CHIP).find(([k]) => v.includes(k))?.[1];
+  const v = value.trim().toLowerCase().replace(/\s+/g, "");
+  const normalized = v.replace(/-/g, "");
+  const chip =
+    LEVEL_CHIP[v] ??
+    LEVEL_CHIP[normalized] ??
+    Object.entries(LEVEL_CHIP).find(([k]) => v.includes(k.replace(/-/g, "")))?.[1];
   if (chip) {
     return (
       <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${chip.className}`}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border ${chip.className}`}
       >
         {chip.label}
       </span>
     );
   }
   if (/\b🟢|verde|low\b/i.test(v)) return <span className="text-emerald-400">🟢 Bajo</span>;
-  if (/\b🟡|amarillo|medio|medium\b/i.test(v)) return <span className="text-amber-400">🟡 Medio</span>;
-  if (/\b🟠|naranja|alto|high\b/i.test(v)) return <span className="text-orange-400">🟠 Alto</span>;
-  if (/\b🔴|rojo|crítico|critico|critical\b/i.test(v)) return <span className="text-red-400">🔴 Crítico</span>;
+  if (/\b🟡|amarillo|moderado|medium\b/i.test(v)) return <span className="text-amber-400">🟡 Moderado</span>;
+  if (/\b🟠|naranja|medio-alto|medioalto\b/i.test(v)) return <span className="text-orange-400">🟠 Medio-Alto</span>;
+  if (/\b🔴|rojo|alto|crítico|critico|critical\b/i.test(v)) return <span className="text-red-400">🔴 Alto</span>;
   return value;
 }
 
@@ -50,7 +57,7 @@ export default function RiskTable({ headers, rows, className = "" }: RiskTablePr
             {headers.map((h, i) => (
               <th
                 key={i}
-                className="px-4 py-3 text-left font-semibold text-gray-200 whitespace-nowrap"
+                className="px-4 py-3 text-center font-semibold text-gray-200 whitespace-nowrap"
               >
                 {h.trim()}
               </th>

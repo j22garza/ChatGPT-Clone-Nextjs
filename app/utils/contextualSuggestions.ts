@@ -75,13 +75,33 @@ const CONTROLS_CHIPS: SuggestionChip[] = [
   { label: "¿Controles actuales?", text: "¿Qué controles existen hoy (ingeniería, administrativos, EPP)?" },
   { label: "Solo EPP", text: "Por ahora solo usamos EPP." },
   { label: "Controles de ingeniería", text: "Tenemos controles de ingeniería instalados." },
+  { label: "Ver tabla de riesgos", text: "¿Puedes darme la tabla de riesgos priorizados con controles?" },
 ];
 
+function lastMessageIsReport(messages: ChatMessageItem[]): boolean {
+  const last = messages.filter((m) => m.user.name === "Connie").pop();
+  if (!last?.text) return false;
+  const t = last.text.toLowerCase();
+  return (
+    /resumen\s*ejecutivo|tabla\s*de\s*riesgos|pr[oó]ximo\s*paso|controles\s*por\s*jerarquía/.test(t) &&
+    (t.length > 400 || /\n##\s/.test(last.text))
+  );
+}
+
 const DEFAULT_CHIPS: SuggestionChip[] = [
+  { label: "Evaluar riesgos de mi área", text: "Quiero evaluar los riesgos de mi área o proceso." },
   { label: "Sector: Construcción", text: "Somos del sector construcción." },
   { label: "Sector: Manufactura", text: "Mi sector es manufactura." },
+  { label: "Cumplimiento normativo", text: "Necesito revisar cumplimiento normativo." },
   { label: "Ubicación", text: "Estamos en CDMX." },
-  { label: "Empleados", text: "Tenemos entre 5 y 20 empleados expuestos." },
+];
+
+const POST_REPORT_CHIPS: SuggestionChip[] = [
+  { label: "Ver controles en detalle", text: "¿Puedes detallar los controles sugeridos (inmediatos y estructurales)?" },
+  { label: "Criterios para proveedores", text: "¿Qué criterios o certificaciones debo pedir a proveedores (EPP, equipos, capacitación)?" },
+  { label: "Necesito presupuesto", text: "Necesito orientación para presupuesto o cotización con proveedores." },
+  { label: "Otra tarea o riesgo", text: "Quiero evaluar otra tarea o riesgo en la misma planta." },
+  { label: "Cerrar y guardar", text: "Con esto tengo suficiente por ahora, gracias." },
 ];
 
 function detectSectorFromMessages(messages: ChatMessageItem[]): string | null {
@@ -109,6 +129,10 @@ const MAX_CHIPS = 5;
 export function getContextualSuggestions(messages: ChatMessageItem[]): SuggestionChip[] {
   if (messages.length === 0) return DEFAULT_CHIPS.slice(0, MAX_CHIPS);
 
+  if (lastMessageIsReport(messages)) {
+    return POST_REPORT_CHIPS.slice(0, MAX_CHIPS);
+  }
+
   const history = messages.map((m) => ({
     role: m.user.name === "Connie" ? "assistant" : "user",
     content: m.text,
@@ -117,7 +141,6 @@ export function getContextualSuggestions(messages: ChatMessageItem[]): Suggestio
   const readiness = getConversationReadiness(history, lastUser);
   const sector = detectSectorFromMessages(messages);
 
-  // HIGH: ya tienen contexto suficiente → sugerir controles o cierre
   if (readiness.readinessLevel === "HIGH") {
     return CONTROLS_CHIPS.slice(0, MAX_CHIPS);
   }
