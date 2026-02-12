@@ -22,7 +22,7 @@ export const LLM_PROVIDERS: Record<LLMProvider, LLMConfig> = {
     name: "Groq (Ultra Fast)",
     speed: "ultra-fast",
     cost: "free",
-    model: "llama-3.1-70b-versatile",
+    model: "llama-3.3-70b-versatile",
     apiKey: process.env.GROQ_API_KEY || "",
     endpoint: "https://api.groq.com/openai/v1",
   },
@@ -31,14 +31,14 @@ export const LLM_PROVIDERS: Record<LLMProvider, LLMConfig> = {
 /** Modelos permitidos por proveedor (para validar selección del usuario) */
 export const ALLOWED_MODELS: Record<LLMProvider, string[]> = {
   openai: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
-  groq: ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+  groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
 };
 
 /** Opciones para el selector de modelos (getEngines) */
 export const MODEL_OPTIONS = [
   { value: "gpt-4o-mini", label: "GPT-4o Mini (OpenAI)" },
   { value: "gpt-4o", label: "GPT-4o (OpenAI)" },
-  { value: "llama-3.1-70b-versatile", label: "Llama 3.1 70B (Groq)" },
+  { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)" },
   { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant (Groq)" },
 ];
 
