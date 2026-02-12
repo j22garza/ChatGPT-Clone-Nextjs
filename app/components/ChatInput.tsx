@@ -71,7 +71,7 @@ function ChatInput({ chatId }: Props) {
         });
         clearTimeout(timeoutId);
 
-        let data: { answer?: string };
+        let data: { answer?: string; stepIndex?: number; state?: string };
         try {
           data = await response.json();
         } catch {
