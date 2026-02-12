@@ -103,4 +103,95 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* Chat prose: legibilidad enterprise */
+  .prose-chat {
+    max-width: 65ch;
+    line-height: 1.65;
+  }
+  .prose-chat h1 { @apply text-xl font-semibold mt-6 mb-3; }
+  .prose-chat h2 { @apply text-lg font-semibold mt-5 mb-2; }
+  .prose-chat h3 { @apply text-base font-semibold mt-4 mb-2; }
+  .prose-chat p { @apply mb-3; }
+  .prose-chat ul, .prose-chat ol { @apply my-3 pl-5; }
+  .prose-chat li { @apply my-1; }
+  .prose-chat blockquote { @apply border-l-4 border-blue-500/50 pl-4 italic my-3 text-gray-300; }
+  .prose-chat code { @apply bg-white/10 px-1.5 py-0.5 rounded text-sm; }
+  .prose-chat pre { @apply bg-white/5 p-4 rounded-lg overflow-x-auto my-3; }
+  .prose-chat pre code { @apply bg-transparent p-0; }
+
+  /* Tablas en markdown: contenedor con overflow y celdas que hacen wrap */
+  .markdown-table-wrap {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+  }
+  .markdown-table-wrap table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .markdown-table-wrap thead {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(15, 23, 42, 0.95);
+  }
+  .markdown-table-wrap th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: rgb(229, 231, 235);
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  .markdown-table-wrap td {
+    padding: 0.5rem 1rem;
+    white-space: normal;
+    word-break: break-word;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .markdown-table-wrap tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.03);
+  }
+}
+
+/* Print: solo el reporte marcado con .report-to-print-visible */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .report-to-print-visible,
+  .report-to-print-visible * {
+    visibility: visible;
+  }
+  .report-to-print-visible {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px;
+    background: white;
+    color: #111;
+    font-size: 12pt;
+  }
+  .report-to-print-visible h3 {
+    color: #111;
+    border-color: #ddd;
+  }
+  .report-to-print-visible table {
+    break-inside: avoid;
+  }
+  .report-to-print-visible tr {
+    break-inside: avoid;
+  }
+  .report-to-print-visible section {
+    break-inside: avoid;
+    border-color: #ddd !important;
+    background: white !important;
+  }
 }

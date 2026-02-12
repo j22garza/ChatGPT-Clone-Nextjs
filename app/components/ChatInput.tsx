@@ -1,21 +1,11 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { toast } from "react-hot-toast";
 import useSWR from "swr";
 import { useChat } from "../context/ChatContext";
-
-const QUICK_CHIPS: { label: string; text: string }[] = [
-  { label: "Sector: Manufactura", text: "Mi sector es manufactura." },
-  { label: "Sector: Construcción", text: "Somos del sector construcción." },
-  { label: "Sector: Químico", text: "Industria química." },
-  { label: "Ubicación: CDMX", text: "Estamos en CDMX." },
-  { label: "Ubicación: Monterrey", text: "Ubicados en Monterrey." },
-  { label: "5-20 empleados", text: "Tenemos entre 5 y 20 empleados expuestos." },
-  { label: "Tarea: Mantenimiento", text: "La tarea principal es mantenimiento." },
-  { label: "Frecuencia: Diario", text: "La exposición es diaria, turno completo." },
-];
+import { getContextualSuggestions } from "../utils/contextualSuggestions";
 
 type Props = { chatId: string };
 
@@ -27,79 +17,94 @@ function ChatInput({ chatId }: Props) {
   const [stepIndex, setStepIndex] = useState<number | null>(null);
 
   const { data: model } = useSWR("model", { fallbackData: "gpt-4o-mini" });
+  const messages = chatId ? getMessages(chatId) : [];
+  const suggestionChips = getContextualSuggestions(messages);
 
-  const generateResponse = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!session?.user?.email) {
-      toast.error("Por favor inicia sesión");
-      return;
-    }
-    const input = prompt.trim();
-    if (!input) {
-      toast.error("Por favor escribe un mensaje");
-      return;
-    }
+  const sendMessage = useCallback(
+    async (input: string) => {
+      if (!session?.user?.email) {
+        toast.error("Por favor inicia sesión");
+        return;
+      }
+      const text = input.trim();
+      if (!text) {
+        toast.error("Por favor escribe un mensaje");
+        return;
+      }
 
-    setPrompt("");
-    setIsLoading(true);
-    const notification = toast.loading("Connie está analizando...");
+      setIsLoading(true);
+      const notification = toast.loading("Connie está analizando...");
 
-    const userMessage = {
-      text: input,
-      createdAt: Date.now(),
-      user: {
-        name: session.user?.name ?? "Usuario",
-        email: session.user?.email ?? "",
-        avatar: session.user?.image ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user?.name ?? "U")}`,
-      },
-    };
-    addMessage(chatId, userMessage);
-    addChatToList(session.user.email, chatId, input.slice(0, 50) + (input.length > 50 ? "…" : ""));
-
-    const prevMessages = getMessages(chatId);
-    const history = [
-      ...prevMessages.map((m) => ({
-        role: (m.user.name === "Connie" ? "assistant" : "user") as "user" | "assistant",
-        content: m.text,
-      })),
-      { role: "user" as const, content: input },
-    ];
-
-    try {
-      const response = await fetch("/api/askQuestion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: input,
-          chatId,
-          model: model || "gpt-4o-mini",
-          session,
-          history,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.answer || `Error ${response.status}`);
-
-      if (typeof data.stepIndex === "number") setStepIndex(data.stepIndex);
-
-      addMessage(chatId, {
-        text: data.answer,
+      const userMessage = {
+        text,
         createdAt: Date.now(),
         user: {
-          name: "Connie",
-          email: "connie@conexus.ai",
-          avatar: "https://ui-avatars.com/api/?name=Connie&background=1e3a8a&color=fff&bold=true",
+          name: session.user?.name ?? "Usuario",
+          email: session.user?.email ?? "",
+          avatar: session.user?.image ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user?.name ?? "U")}`,
         },
-      });
+      };
+      addMessage(chatId, userMessage);
+      addChatToList(session.user.email, chatId, text.slice(0, 50) + (text.length > 50 ? "…" : ""));
 
-      toast.success("Connie ha respondido!", { id: notification });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Error al procesar tu mensaje.";
-      toast.error(message, { id: notification, duration: 5000 });
-    } finally {
-      setIsLoading(false);
-    }
+      const prevMessages = getMessages(chatId);
+      const history = [
+        ...prevMessages.map((m) => ({
+          role: (m.user.name === "Connie" ? "assistant" : "user") as "user" | "assistant",
+          content: m.text,
+        })),
+        { role: "user" as const, content: text },
+      ];
+
+      try {
+        const response = await fetch("/api/askQuestion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: text,
+            chatId,
+            model: model || "gpt-4o-mini",
+            session,
+            history,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.answer || `Error ${response.status}`);
+
+        if (typeof data.stepIndex === "number") setStepIndex(data.stepIndex);
+
+        addMessage(chatId, {
+          text: data.answer,
+          createdAt: Date.now(),
+          user: {
+            name: "Connie",
+            email: "connie@conexus.ai",
+            avatar: "https://ui-avatars.com/api/?name=Connie&background=1e3a8a&color=fff&bold=true",
+          },
+        });
+
+        toast.success("Connie ha respondido!", { id: notification });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Error al procesar tu mensaje.";
+        toast.error(message, { id: notification, duration: 5000 });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [session, chatId, addMessage, addChatToList, getMessages, model]
+  );
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const text = prompt.trim();
+    if (!text) return;
+    setPrompt("");
+    sendMessage(text);
+  };
+
+  const handleChipClick = (chipText: string) => {
+    sendMessage(chipText);
   };
 
   return (
@@ -111,19 +116,20 @@ function ChatInput({ chatId }: Props) {
           </p>
         )}
         <div className="flex flex-wrap gap-1.5 mb-2">
-          {QUICK_CHIPS.map((chip) => (
+          {suggestionChips.map((chip) => (
             <button
               key={chip.label}
               type="button"
-              onClick={() => setPrompt((p) => (p ? p + " " + chip.text : chip.text))}
-              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
+              onClick={() => handleChipClick(chip.text)}
+              disabled={!session || loading}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {chip.label}
             </button>
           ))}
         </div>
         <form
-          onSubmit={generateResponse}
+          onSubmit={handleSubmit}
           className="relative flex items-end gap-2 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl shadow-black/20 p-2 hover:border-white/30 transition-all duration-200"
         >
           <div className="flex-1 min-w-0">

@@ -1,30 +1,31 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useEffect, useRef } from "react";
 import Message from "./Message";
 import HomeContent from "./HomeContent";
 import { useChat } from "../context/ChatContext";
+import { useAutoScroll } from "../hooks/useAutoScroll";
 
 type Props = { chatId: string };
 
 function Chat({ chatId }: Props) {
-  const { data: session } = useSession();
   const { getMessages, ensureMessagesLoaded } = useChat();
-  const messageEndRef = useRef<null | HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (chatId) ensureMessagesLoaded(chatId);
   }, [chatId, ensureMessagesLoaded]);
 
   const messages = chatId ? getMessages(chatId) : [];
-
-  useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  useAutoScroll(scrollContainerRef, messages.length);
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden pb-32 custom-scrollbar">
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-32 custom-scrollbar"
+        style={{ contain: "layout style" }}
+      >
       {messages.length === 0 && (
         <div className="min-h-full flex items-center justify-center">
           <HomeContent />
@@ -35,7 +36,8 @@ function Chat({ chatId }: Props) {
           <Message key={i} message={message} />
         ))}
       </div>
-      <div ref={messageEndRef} />
+      <div aria-hidden className="h-1" />
+      </div>
     </div>
   );
 }

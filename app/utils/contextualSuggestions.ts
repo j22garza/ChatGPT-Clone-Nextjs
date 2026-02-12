@@ -1,0 +1,142 @@
+/**
+ * Generador local de sugerencias contextuales (no depende del LLM).
+ * Basado en readiness: sector, tarea, exposición, controles.
+ * Máximo 3–5 chips que cambian con el estado.
+ */
+
+import type { ChatMessageItem } from "../context/ChatContext";
+import {
+  getConversationReadiness,
+  type ReadinessLevel,
+} from "./conversationReadiness";
+
+export interface SuggestionChip {
+  label: string;
+  text: string;
+}
+
+const SECTOR_CHIPS: SuggestionChip[] = [
+  { label: "Construcción", text: "Somos del sector construcción." },
+  { label: "Manufactura", text: "Mi sector es manufactura." },
+  { label: "Químico", text: "Industria química." },
+  { label: "Minería", text: "Sector minería." },
+  { label: "Servicios", text: "Sector servicios." },
+];
+
+const TASK_BY_SECTOR: Record<string, SuggestionChip[]> = {
+  construcción: [
+    { label: "Trabajo en altura", text: "La tarea principal es trabajo en altura." },
+    { label: "Izaje / grúas", text: "Tareas de izaje y grúas." },
+    { label: "Excavación", text: "Excavación y movimiento de tierras." },
+    { label: "Eléctricos", text: "Trabajos eléctricos en obra." },
+  ],
+  construccion: [
+    { label: "Trabajo en altura", text: "La tarea principal es trabajo en altura." },
+    { label: "Izaje / grúas", text: "Tareas de izaje y grúas." },
+    { label: "Excavación", text: "Excavación y movimiento de tierras." },
+    { label: "Eléctricos", text: "Trabajos eléctricos en obra." },
+  ],
+  manufactura: [
+    { label: "Soldadura", text: "La tarea es soldadura." },
+    { label: "Prensas / troquelado", text: "Operación de prensas y troquelado." },
+    { label: "Químicos / pintura", text: "Manejo de químicos y pintura." },
+    { label: "CNC / torno", text: "Operación de CNC o torno." },
+  ],
+  químico: [
+    { label: "Manejo de químicos", text: "Manejo de sustancias químicas." },
+    { label: "Almacenamiento", text: "Almacenamiento y trasvase de productos." },
+  ],
+  quimico: [
+    { label: "Manejo de químicos", text: "Manejo de sustancias químicas." },
+    { label: "Almacenamiento", text: "Almacenamiento y trasvase de productos." },
+  ],
+  minería: [
+    { label: "Espacio confinado", text: "Trabajos en espacio confinado." },
+    { label: "Maquinaria pesada", text: "Operación de maquinaria pesada." },
+  ],
+  mineria: [
+    { label: "Espacio confinado", text: "Trabajos en espacio confinado." },
+    { label: "Maquinaria pesada", text: "Operación de maquinaria pesada." },
+  ],
+  servicios: [
+    { label: "Mantenimiento", text: "La tarea principal es mantenimiento." },
+    { label: "Limpieza", text: "Limpieza y desinfección." },
+  ],
+};
+
+const EXPOSURE_CHIPS: SuggestionChip[] = [
+  { label: "¿Cuántas personas?", text: "¿Cuántas personas están expuestas y con qué frecuencia?" },
+  { label: "Frecuencia diaria", text: "La exposición es diaria, turno completo." },
+  { label: "Frecuencia semanal", text: "La exposición es semanal." },
+  { label: "Ocasional", text: "Exposición ocasional, no todos los días." },
+];
+
+const CONTROLS_CHIPS: SuggestionChip[] = [
+  { label: "¿Controles actuales?", text: "¿Qué controles existen hoy (ingeniería, administrativos, EPP)?" },
+  { label: "Solo EPP", text: "Por ahora solo usamos EPP." },
+  { label: "Controles de ingeniería", text: "Tenemos controles de ingeniería instalados." },
+];
+
+const DEFAULT_CHIPS: SuggestionChip[] = [
+  { label: "Sector: Construcción", text: "Somos del sector construcción." },
+  { label: "Sector: Manufactura", text: "Mi sector es manufactura." },
+  { label: "Ubicación", text: "Estamos en CDMX." },
+  { label: "Empleados", text: "Tenemos entre 5 y 20 empleados expuestos." },
+];
+
+function detectSectorFromMessages(messages: ChatMessageItem[]): string | null {
+  const text = messages.map((m) => m.text).join(" ").toLowerCase();
+  if (/\bconstrucci[oó]n\b/.test(text)) return "construcción";
+  if (/\bconstruccion\b/.test(text)) return "construccion";
+  if (/\bmanufactura\b/.test(text)) return "manufactura";
+  if (/\bqu[ií]mico\b/.test(text)) return "químico";
+  if (/\bquimico\b/.test(text)) return "quimico";
+  if (/\bminer[ií]a\b/.test(text)) return "minería";
+  if (/\bmineria\b/.test(text)) return "mineria";
+  if (/\bservicios\b/.test(text)) return "servicios";
+  return null;
+}
+
+const MAX_CHIPS = 5;
+
+/**
+ * Devuelve 3–5 chips contextuales según el estado de la conversación.
+ * - Sin industria → sectores.
+ * - Con industria pero sin tarea → tareas típicas del sector.
+ * - Con tarea pero sin exposición → frecuencia / cuántas personas.
+ * - Con exposición → controles actuales.
+ */
+export function getContextualSuggestions(messages: ChatMessageItem[]): SuggestionChip[] {
+  if (messages.length === 0) return DEFAULT_CHIPS.slice(0, MAX_CHIPS);
+
+  const history = messages.map((m) => ({
+    role: m.user.name === "Connie" ? "assistant" : "user",
+    content: m.text,
+  }));
+  const lastUser = messages.filter((m) => m.user.name !== "Connie").pop()?.text ?? "";
+  const readiness = getConversationReadiness(history, lastUser);
+  const sector = detectSectorFromMessages(messages);
+
+  // HIGH: ya tienen contexto suficiente → sugerir controles o cierre
+  if (readiness.readinessLevel === "HIGH") {
+    return CONTROLS_CHIPS.slice(0, MAX_CHIPS);
+  }
+
+  // MEDIUM: tienen tarea pero falta exposición
+  if (readiness.readinessLevel === "MEDIUM") {
+    return EXPOSURE_CHIPS.slice(0, MAX_CHIPS);
+  }
+
+  // LOW: tienen industria (o nada) → tareas por sector o sectores
+  if (readiness.hasIndustry && sector && TASK_BY_SECTOR[sector]) {
+    return TASK_BY_SECTOR[sector].slice(0, MAX_CHIPS);
+  }
+
+  if (readiness.hasIndustry && !readiness.hasSpecificTask) {
+    return TASK_BY_SECTOR.construcción.concat(TASK_BY_SECTOR.manufactura)
+      .filter((c, i, a) => a.findIndex((x) => x.text === c.text) === i)
+      .slice(0, MAX_CHIPS);
+  }
+
+  return SECTOR_CHIPS.slice(0, MAX_CHIPS);
+}
