@@ -4,6 +4,8 @@ import {
   getActiveProvider,
   getActiveProviderConfig,
   resolveModel,
+  LLM_PROVIDERS,
+  type LLMProvider,
 } from "./llmProviders";
 import { deriveStateFromHistory, type ConversationState } from "./stateDerivation";
 import { computeRiskScore, formatRiskContextForPrompt } from "./riskScoring";
@@ -221,38 +223,43 @@ El usuario YA recibió el análisis completo (resumen, tabla de riesgos, control
     userContent += "\n\n" + PREANALYSIS_INSTRUCTION;
   }
 
-  const llm = new ChatOpenAI({
-    modelName: modelToUse,
-    temperature: 0.7,
-    maxTokens: 1500,
-    apiKey: config.apiKey,
-    ...(config.endpoint && { configuration: { baseURL: config.endpoint } }),
-  });
+  const langchainMessages = [
+    new SystemMessage(SYSTEM_PROMPT),
+    ...messageHistory.map((m) =>
+      m.role === "assistant" ? new AIMessage(m.content) : new HumanMessage(m.content)
+    ),
+    new HumanMessage(userContent),
+  ];
 
-  console.log(`[queryApi] provider: ${provider}, model: ${modelToUse}, state: ${derived.state}, readiness: ${readiness.readinessLevel}`);
+  const invokeLlm = (p: LLMProvider) => {
+    const cfg = LLM_PROVIDERS[p];
+    const modelName = resolveModel(p, model);
+    const llm = new ChatOpenAI({
+      modelName,
+      temperature: 0.7,
+      maxTokens: 1500,
+      apiKey: cfg.apiKey,
+      ...(cfg.endpoint && { configuration: { baseURL: cfg.endpoint } }),
+    });
+    return llm.invoke(langchainMessages);
+  };
 
-  try {
-    const langchainMessages = [
-      new SystemMessage(SYSTEM_PROMPT),
-      ...messageHistory.map((m) =>
-        m.role === "assistant" ? new AIMessage(m.content) : new HumanMessage(m.content)
-      ),
-      new HumanMessage(userContent),
-    ];
-
-    const response = await llm.invoke(langchainMessages);
+  const processResponse = (response: Awaited<ReturnType<typeof invokeLlm>>) => {
     let content = typeof response.content === "string" ? response.content : String(response.content ?? "");
-
-    if (!content.trim()) {
-      throw new Error("Respuesta vacía del modelo");
-    }
-
+    if (!content.trim()) throw new Error("Respuesta vacía del modelo");
     if (readiness.readinessLevel === "HIGH") {
       content = enforceOneQuestion(content, derived.state);
     } else {
       content = enforceSingleQuestion(content);
     }
+    return content;
+  };
 
+  console.log(`[queryApi] provider: ${provider}, model: ${modelToUse}, state: ${derived.state}, readiness: ${readiness.readinessLevel}`);
+
+  try {
+    const response = await invokeLlm(provider);
+    const content = processResponse(response);
     console.log(`[queryApi] OK, length: ${content.length}`);
     return {
       answer: content,
@@ -268,8 +275,23 @@ El usuario YA recibió el análisis completo (resumen, tabla de riesgos, control
       );
     }
     if (/rate limit|quota|overloaded/i.test(message)) {
+      const other: LLMProvider = provider === "openai" ? "groq" : "openai";
+      if (LLM_PROVIDERS[other].apiKey) {
+        console.log(`[queryApi] Límite en ${provider}, intentando con ${other}`);
+        try {
+          const fallbackResponse = await invokeLlm(other);
+          const content = processResponse(fallbackResponse);
+          console.log(`[queryApi] OK con ${other}, length: ${content.length}`);
+          return {
+            answer: content,
+            derivedState: { state: derived.state, stepIndex: derived.stepIndex },
+          };
+        } catch (fallbackErr) {
+          console.error("[queryApi] Fallback también falló:", fallbackErr);
+        }
+      }
       throw new Error(
-        "Límite de uso alcanzado. Intenta más tarde o verifica tu plan."
+        "Límite de uso alcanzado. Intenta más tarde o verifica tu plan (OpenAI/Groq). Si tienes otra API key configurada, se intentará usar automáticamente."
       );
     }
     if (/timeout|Timeout/i.test(message)) {
