@@ -73,7 +73,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const getMessages = useCallback((chatId: string) => {
     if (messagesCache[chatId] !== undefined) return messagesCache[chatId];
-    return loadMessages(chatId);
+    return [];
   }, [messagesCache]);
 
   const ensureMessagesLoaded = useCallback((chatId: string) => {
@@ -87,11 +87,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addMessage = useCallback((chatId: string, message: ChatMessageItem) => {
-    const current = loadMessages(chatId);
+    const current = messagesCache[chatId] ?? loadMessages(chatId);
     const next = [...current, message];
     saveMessages(chatId, next);
     setMessagesCache((prev) => ({ ...prev, [chatId]: next }));
-  }, []);
+  }, [messagesCache]);
 
   const createChat = useCallback((userEmail: string) => {
     const id = crypto.randomUUID();
