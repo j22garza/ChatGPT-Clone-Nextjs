@@ -11,19 +11,34 @@ export function triggerPrint(printAreaRef: HTMLElement | null) {
     const { jsPDF } = await import("jspdf");
 
     const wrap = document.createElement("div");
+    wrap.id = "pdf-export-wrap";
     wrap.style.cssText =
       "position:fixed;left:-9999px;top:0;width:800px;max-width:95vw;background:#fff;color:#111;padding:24px;font-family:system-ui,sans-serif;font-size:12pt;box-sizing:border-box;";
     wrap.innerHTML = printAreaRef.innerHTML;
 
     const style = document.createElement("style");
     style.textContent = `
-      .report-content * { color: #111 !important; background: transparent !important; }
-      .report-content table { border-collapse: collapse; }
-      .report-content th, .report-content td { border: 1px solid #333 !important; padding: 6px 8px !important; }
-      .report-content section { border: 1px solid #ddd !important; margin-bottom: 12px !important; padding: 12px !important; }
-      .report-content h3 { border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 0; }
+      #pdf-export-wrap, #pdf-export-wrap * { color: #111 !important; background-color: transparent !important; }
+      #pdf-export-wrap th { background-color: #1e3a5f !important; color: #fff !important; }
+      #pdf-export-wrap table { border-collapse: collapse; }
+      #pdf-export-wrap th, #pdf-export-wrap td { border: 1px solid #333 !important; padding: 6px 8px !important; }
+      #pdf-export-wrap section { border: 1px solid #ddd !important; margin-bottom: 12px !important; padding: 12px !important; background: #fff !important; }
+      #pdf-export-wrap h1, #pdf-export-wrap h2, #pdf-export-wrap h3 { color: #111 !important; border-color: #ddd !important; }
     `;
     wrap.prepend(style);
+    const all = wrap.querySelectorAll("*");
+    all.forEach((el) => {
+      const e = el as HTMLElement;
+      e.style.setProperty("color", "#111", "important");
+      if (e.tagName !== "TH") {
+        e.style.setProperty("background-color", "transparent", "important");
+      }
+    });
+    wrap.querySelectorAll("th").forEach((el) => {
+      const e = el as HTMLElement;
+      e.style.setProperty("background-color", "#1e3a5f", "important");
+      e.style.setProperty("color", "#fff", "important");
+    });
     document.body.appendChild(wrap);
 
     try {

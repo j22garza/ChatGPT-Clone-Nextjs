@@ -23,7 +23,7 @@ function Chat({ chatId }: Props) {
     <div className="flex-1 min-h-0 flex flex-col">
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-32 custom-scrollbar"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-52 custom-scrollbar"
         style={{ contain: "layout style" }}
       >
       {messages.length === 0 && (
@@ -31,7 +31,7 @@ function Chat({ chatId }: Props) {
           <HomeContent />
         </div>
       )}
-      <div className="max-w-3xl w-full mx-auto px-2 sm:px-4">
+      <div className="max-w-3xl w-full ml-[6%] mr-auto px-2 sm:px-4">
         {messages.map((message, i) => (
           <Message key={i} message={message} />
         ))}

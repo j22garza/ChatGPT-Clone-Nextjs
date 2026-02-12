@@ -115,14 +115,14 @@ function ChatInput({ chatId }: Props) {
             Progreso: Paso {stepIndex}/8
           </p>
         )}
-        <div className="flex flex-wrap gap-1.5 mb-2">
+        <div className="flex gap-1.5 mb-2 overflow-x-auto overflow-y-hidden py-1 max-h-10 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
           {suggestionChips.map((chip) => (
             <button
               key={chip.label}
               type="button"
               onClick={() => handleChipClick(chip.text)}
               disabled={!session || loading}
-              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               {chip.label}
             </button>
