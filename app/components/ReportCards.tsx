@@ -9,7 +9,7 @@ type Props = {
   sections: ReportSection[];
   className?: string;
   /** Ref for the printable area (PDF export) */
-  printRef?: React.RefObject<HTMLDivElement | null>;
+  printRef?: React.RefObject<HTMLDivElement>;
 };
 
 const cardTitleClass =
