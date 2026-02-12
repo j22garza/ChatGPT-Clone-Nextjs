@@ -79,10 +79,11 @@ function ChatInput({ chatId }: Props) {
         }
         if (!response.ok) throw new Error(data.answer || `Error ${response.status}`);
 
+        const answer = typeof data.answer === "string" && data.answer.trim() ? data.answer : "No se pudo generar una respuesta.";
         if (typeof data.stepIndex === "number") setStepIndex(data.stepIndex);
 
         addMessage(chatId, {
-          text: data.answer,
+          text: answer,
           createdAt: Date.now(),
           user: {
             name: "Connie",
