@@ -9,38 +9,10 @@ import { deriveStateFromHistory, type ConversationState } from "./stateDerivatio
 import { computeRiskScore, formatRiskContextForPrompt } from "./riskScoring";
 import { enforceOneQuestion, enforceSingleQuestion } from "./enforceOneQuestion";
 import { getConversationReadiness } from "./conversationReadiness";
-
-const searchWeb = async (query: string, options?: { advanced?: boolean; maxResults?: number }): Promise<string> => {
-  try {
-    const tavilyApiKey = process.env.TAVILY_API_KEY;
-    if (!tavilyApiKey) return "";
-
-    const response = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: tavilyApiKey,
-        query,
-        search_depth: options?.advanced ? "advanced" : "basic",
-        max_results: options?.maxResults ?? 3,
-      }),
-    });
-
-    if (!response.ok) return "";
-
-    const data = await response.json();
-    const results = data.results || [];
-    return results
-      .map(
-        (r: { title?: string; content?: string; url?: string }, i: number) =>
-          `[Fuente ${i + 1}]: ${r.title ?? ""}\n${r.content ?? ""}\nURL: ${r.url ?? ""}`
-      )
-      .join("\n\n");
-  } catch (err: unknown) {
-    console.error("Error en búsqueda web:", err);
-    return "";
-  }
-};
+import {
+  searchWeb,
+  formatSearchResultsForPrompt,
+} from "./webSearch";
 
 const SYSTEM_PROMPT = `Eres Connie, el asistente virtual especializado en EHS (Environmental, Health & Safety) de Conexus para México y Latinoamérica. Ayudas a empresas con seguridad industrial, salud ocupacional, medio ambiente, prevención de riesgos y protección civil.
 
@@ -191,9 +163,10 @@ const query = async (
   const providerQuery = isProviderRequest
     ? `proveedores EHS seguridad industrial México certificados autorizados ${prompt.slice(0, 80)}`.trim()
     : prompt;
-  const webSearchResults = needsWebSearch
-    ? await searchWeb(providerQuery, isProviderRequest ? { advanced: true, maxResults: 6 } : undefined)
-    : "";
+  const searchResults = needsWebSearch
+    ? await searchWeb(providerQuery, isProviderRequest ? { advanced: true, maxResults: 8 } : { maxResults: 5 })
+    : [];
+  const webSearchResults = formatSearchResultsForPrompt(searchResults);
 
   const messageHistory = messages.slice(-10);
   const derived = deriveStateFromHistory(messageHistory);

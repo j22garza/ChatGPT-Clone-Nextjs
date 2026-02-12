@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { searchWeb } from "@/app/utils/webSearch";
 
 export type ProviderResult = {
   name: string;
@@ -83,43 +84,17 @@ export default async function handler(
     .join(" ");
   const fullQuery = `${q} México certificado autorizado distribuidor`.trim();
 
-  const tavilyKey = process.env.TAVILY_API_KEY;
-  if (!tavilyKey) {
-    return res.status(200).json({
-      providers: [],
-      error: "Búsqueda no configurada (TAVILY_API_KEY). Los proveedores se muestran solo desde el reporte.",
-    });
-  }
-
   try {
-    const searchRes = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: tavilyKey,
-        query: fullQuery,
-        search_depth: "advanced",
-        max_results: 8,
-        include_domains: [],
-      }),
-    });
-
-    if (!searchRes.ok) {
-      return res.status(200).json({
-        providers: [],
-        error: "No se pudo completar la búsqueda. Intenta de nuevo.",
-      });
-    }
-
-    const data = (await searchRes.json()) as {
-      results?: { title?: string; url?: string; content?: string }[];
-    };
-    const results = data.results || [];
-    const toScrape = results.slice(0, 5);
+    const results = await searchWeb(fullQuery, { advanced: true, maxResults: 8 });
+    const toScrape = results.slice(0, 5).map((r) => ({
+      title: r.title,
+      url: r.url,
+      content: r.content,
+    }));
 
     const raw = await Promise.all(
       toScrape.map((r) =>
-        scrapeContact(r.url || "", r.title || "").then((p) => ({
+        scrapeContact(r.url ?? "", r.title ?? "").then((p) => ({
           ...p,
           snippet: r.content?.slice(0, 160),
         }))
