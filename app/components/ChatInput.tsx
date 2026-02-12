@@ -109,20 +109,20 @@ function ChatInput({ chatId }: Props) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-navy-950 via-navy-950/95 to-transparent pt-8 pb-4">
-      <div className="max-w-3xl w-full ml-[10%] mr-auto px-3 sm:px-5">
+      <div className="max-w-3xl w-full mx-auto px-4 sm:px-6">
         {stepIndex != null && (
           <p className="text-xs text-gray-500 mb-2 px-1">
             Progreso: Paso {stepIndex}/8
           </p>
         )}
-        <div className="flex gap-1.5 mb-2 overflow-x-auto overflow-y-hidden py-1 max-h-10 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+        <div className="flex flex-wrap gap-2 mb-3">
           {suggestionChips.map((chip) => (
             <button
               key={chip.label}
               type="button"
               onClick={() => handleChipClick(chip.text)}
               disabled={!session || loading}
-              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {chip.label}
             </button>

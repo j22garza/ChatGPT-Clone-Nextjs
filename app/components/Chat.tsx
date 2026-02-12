@@ -31,7 +31,7 @@ function Chat({ chatId }: Props) {
           <HomeContent />
         </div>
       )}
-      <div className="max-w-3xl w-full ml-[10%] mr-auto px-3 sm:px-5">
+      <div className="max-w-3xl w-full mx-auto px-4 sm:px-6">
         {messages.map((message, i) => (
           <Message key={i} message={message} />
         ))}
