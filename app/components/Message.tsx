@@ -76,9 +76,9 @@ function Message({ message }: Props) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="group py-6 pl-4 pr-4 md:pl-6 md:pr-6"
+      className="group py-6 px-4 sm:px-6 md:px-8"
     >
-      <div className="flex items-start gap-4 max-w-3xl ml-0 mr-auto">
+      <div className="flex items-start gap-4 max-w-3xl mx-auto">
         <div className="flex-shrink-0">
           {isConnie ? (
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
