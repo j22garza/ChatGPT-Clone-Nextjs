@@ -36,19 +36,23 @@ export default async function handler(
   console.log(`[askQuestion] chat: ${chatId}, user: ${session.user.email}, history: ${previousMessages.length} msgs`);
 
   try {
-    const timeoutPromise = new Promise<string>((_, reject) =>
+    const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Timeout: La consulta tardó más de 60 segundos")), 60000)
     );
-    const response = await Promise.race([
+    const result = await Promise.race([
       query(prompt.trim(), chatId, model || "gpt-4o-mini", previousMessages),
       timeoutPromise,
-    ]) as string;
+    ]);
 
-    if (!response || response.trim() === "") {
+    if (!result.answer || result.answer.trim() === "") {
       throw new Error("Connie no pudo generar una respuesta. La respuesta está vacía.");
     }
 
-    return res.status(200).json({ answer: response });
+    return res.status(200).json({
+      answer: result.answer,
+      stepIndex: result.derivedState?.stepIndex,
+      state: result.derivedState?.state,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error al procesar la consulta.";
     console.error("[askQuestion]", error);

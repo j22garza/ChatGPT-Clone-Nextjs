@@ -6,6 +6,17 @@ import { toast } from "react-hot-toast";
 import useSWR from "swr";
 import { useChat } from "../context/ChatContext";
 
+const QUICK_CHIPS: { label: string; text: string }[] = [
+  { label: "Sector: Manufactura", text: "Mi sector es manufactura." },
+  { label: "Sector: Construcción", text: "Somos del sector construcción." },
+  { label: "Sector: Químico", text: "Industria química." },
+  { label: "Ubicación: CDMX", text: "Estamos en CDMX." },
+  { label: "Ubicación: Monterrey", text: "Ubicados en Monterrey." },
+  { label: "5-20 empleados", text: "Tenemos entre 5 y 20 empleados expuestos." },
+  { label: "Tarea: Mantenimiento", text: "La tarea principal es mantenimiento." },
+  { label: "Frecuencia: Diario", text: "La exposición es diaria, turno completo." },
+];
+
 type Props = { chatId: string };
 
 function ChatInput({ chatId }: Props) {
@@ -13,6 +24,7 @@ function ChatInput({ chatId }: Props) {
   const { getMessages, addMessage, addChatToList } = useChat();
   const [prompt, setPrompt] = useState("");
   const [loading, setIsLoading] = useState(false);
+  const [stepIndex, setStepIndex] = useState<number | null>(null);
 
   const { data: model } = useSWR("model", { fallbackData: "gpt-4o-mini" });
 
@@ -69,6 +81,8 @@ function ChatInput({ chatId }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.answer || `Error ${response.status}`);
 
+      if (typeof data.stepIndex === "number") setStepIndex(data.stepIndex);
+
       addMessage(chatId, {
         text: data.answer,
         createdAt: Date.now(),
@@ -91,6 +105,23 @@ function ChatInput({ chatId }: Props) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-navy-950 via-navy-950/95 to-transparent pt-8 pb-4">
       <div className="max-w-3xl mx-auto px-4">
+        {stepIndex != null && (
+          <p className="text-xs text-gray-500 mb-2 px-1">
+            Progreso: Paso {stepIndex}/8
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {QUICK_CHIPS.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              onClick={() => setPrompt((p) => (p ? p + " " + chip.text : chip.text))}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors"
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
         <form
           onSubmit={generateResponse}
           className="relative flex items-end gap-2 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl shadow-black/20 p-2 hover:border-white/30 transition-all duration-200"
