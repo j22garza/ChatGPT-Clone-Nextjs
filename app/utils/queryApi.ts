@@ -163,9 +163,21 @@ const query = async (
   const providerQuery = isProviderRequest
     ? `proveedores EHS seguridad industrial México certificados autorizados ${prompt.slice(0, 80)}`.trim()
     : prompt;
-  const searchResults = needsWebSearch
-    ? await searchWeb(providerQuery, isProviderRequest ? { advanced: true, maxResults: 8 } : { maxResults: 5 })
-    : [];
+
+  const SEARCH_TIMEOUT_MS = 5000;
+  let searchResults: Awaited<ReturnType<typeof searchWeb>> = [];
+  if (needsWebSearch) {
+    try {
+      searchResults = await Promise.race([
+        searchWeb(providerQuery, isProviderRequest ? { advanced: true, maxResults: 8 } : { maxResults: 5 }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Search timeout")), SEARCH_TIMEOUT_MS)
+        ),
+      ]);
+    } catch (e) {
+      console.warn("[queryApi] Búsqueda web timeout o error, continuando sin resultados:", e);
+    }
+  }
   const webSearchResults = formatSearchResultsForPrompt(searchResults);
 
   const messageHistory = messages.slice(-10);
