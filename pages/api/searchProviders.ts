@@ -117,7 +117,7 @@ export default async function handler(
     const results = data.results || [];
     const toScrape = results.slice(0, 5);
 
-    const providers: ProviderResult[] = await Promise.all(
+    const raw = await Promise.all(
       toScrape.map((r) =>
         scrapeContact(r.url || "", r.title || "").then((p) => ({
           ...p,
@@ -125,6 +125,14 @@ export default async function handler(
         }))
       )
     );
+    const providers: ProviderResult[] = raw.map((p) => ({
+      name: p.name ?? "Proveedor",
+      url: p.url ?? "",
+      snippet: p.snippet,
+      phone: p.phone,
+      email: p.email,
+      address: p.address,
+    }));
 
     return res.status(200).json({ providers });
   } catch (err) {
