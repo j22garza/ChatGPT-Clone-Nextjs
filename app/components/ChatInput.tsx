@@ -109,7 +109,7 @@ function ChatInput({ chatId }: Props) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-navy-950 via-navy-950/95 to-transparent pt-8 pb-4">
-      <div className="max-w-3xl mx-auto px-4">
+      <div className="max-w-3xl w-full ml-[10%] mr-auto px-3 sm:px-5">
         {stepIndex != null && (
           <p className="text-xs text-gray-500 mb-2 px-1">
             Progreso: Paso {stepIndex}/8
@@ -151,7 +151,7 @@ function ChatInput({ chatId }: Props) {
                   }
                 }
               }}
-              className="w-full bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none disabled:cursor-not-allowed text-base leading-6 py-3 px-4 max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+              className="w-full bg-transparent text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:ring-inset rounded-lg disabled:cursor-not-allowed text-base leading-6 py-3 px-4 max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
               style={{ minHeight: "24px" }}
             />
           </div>

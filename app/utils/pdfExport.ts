@@ -1,7 +1,10 @@
 /**
  * Descarga el reporte como archivo PDF (sin abrir impresora).
- * Usa html2canvas + jspdf en el cliente para generar el PDF.
+ * Captura por trozos para no superar el límite del canvas y que no se corte (ej. en Proveedores).
  */
+
+const CHUNK_HEIGHT_PX = 1200;
+const SCALE = 2;
 
 export function triggerPrint(printAreaRef: HTMLElement | null) {
   if (typeof window === "undefined" || !printAreaRef) return;
@@ -13,7 +16,7 @@ export function triggerPrint(printAreaRef: HTMLElement | null) {
     const wrap = document.createElement("div");
     wrap.id = "pdf-export-wrap";
     wrap.style.cssText =
-      "position:fixed;left:-9999px;top:0;width:800px;max-width:95vw;background:#fff;color:#111;padding:24px;font-family:system-ui,sans-serif;font-size:12pt;box-sizing:border-box;";
+      "position:fixed;left:-9999px;top:0;width:800px;max-width:95vw;background:#fff;color:#111;padding:24px;font-family:system-ui,sans-serif;font-size:12pt;box-sizing:border-box;overflow:visible;";
     wrap.innerHTML = printAreaRef.innerHTML;
 
     const style = document.createElement("style");
@@ -42,53 +45,49 @@ export function triggerPrint(printAreaRef: HTMLElement | null) {
     document.body.appendChild(wrap);
 
     try {
-      const canvas = await html2canvas(wrap, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
-      document.body.removeChild(wrap);
-
+      const totalHeight = wrap.scrollHeight;
+      const numChunks = Math.ceil(totalHeight / CHUNK_HEIGHT_PX) || 1;
       const pdf = new jsPDF("p", "mm", "a4");
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
       const margin = 10;
       const w = pageW - margin * 2;
-      const imgW = canvas.width;
-      const imgH = canvas.height;
-      const ratio = w / imgW;
-      const h = imgH * ratio;
-
       const drawH = pageH - margin * 2;
-      if (h <= drawH) {
-        pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, w, h);
-      } else {
-        const sliceHeight = (drawH / h) * imgH;
-        let offset = 0;
-        let pageNum = 0;
-        while (offset < imgH) {
-          const sh = Math.min(sliceHeight, imgH - offset);
-          const pageCanvas = document.createElement("canvas");
-          pageCanvas.width = imgW;
-          pageCanvas.height = sh;
-          const ctx = pageCanvas.getContext("2d");
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, imgW, sh);
-            ctx.drawImage(canvas, 0, offset, imgW, sh, 0, 0, imgW, sh);
-          }
-          const pageImgH = (sh * w) / imgW;
-          if (pageNum > 0) pdf.addPage();
-          pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, w, pageImgH);
-          offset += sh;
-          pageNum++;
-        }
+
+      for (let i = 0; i < numChunks; i++) {
+        const frame = document.createElement("div");
+        frame.style.cssText =
+          "position:fixed;left:-9999px;top:0;width:800px;height:" +
+          CHUNK_HEIGHT_PX +
+          "px;overflow:hidden;background:#fff;";
+        const clone = wrap.cloneNode(true) as HTMLElement;
+        clone.style.marginTop = `${-i * CHUNK_HEIGHT_PX}px`;
+        clone.style.height = `${totalHeight}px`;
+        frame.appendChild(clone);
+        document.body.appendChild(frame);
+
+        const canvas = await html2canvas(frame, {
+          scale: SCALE,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          height: CHUNK_HEIGHT_PX,
+          width: 800,
+        });
+        document.body.removeChild(frame);
+
+        const imgW = canvas.width;
+        const imgH = canvas.height;
+        const ratio = w / imgW;
+        const h = imgH * ratio;
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, w, Math.min(h, drawH));
+        if (i < numChunks - 1) pdf.addPage();
       }
 
+      document.body.removeChild(wrap);
       pdf.save("reporte-connie.pdf");
     } catch (e) {
-      document.body.removeChild(wrap);
+      if (wrap.parentNode) document.body.removeChild(wrap);
       console.error("Error generando PDF:", e);
       window.alert("No se pudo generar el PDF. Intenta de nuevo.");
     }
