@@ -58,20 +58,27 @@ const markdownComponents: React.ComponentProps<typeof ReactMarkdown>["components
   ),
 };
 
+function hasMarkdownTable(text: string): boolean {
+  const lines = text.split(/\n/).filter((l) => l.trim().startsWith("|"));
+  return lines.length >= 2;
+}
+
 function Message({ message }: Props) {
   const isConnie = message.user.name === "Connie";
   const isReport = isConnie && looksLikeReport(message.text);
   const parsed = isReport ? parseReport(message.text) : null;
   const reportPrintRef = React.useRef<HTMLDivElement>(null);
+  const hasTable = isConnie && hasMarkdownTable(message.text);
+  const showPdfButton = isConnie && (parsed?.sections?.length ? true : hasTable);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="group py-6 px-4 md:px-6 lg:px-12"
+      className="group py-6 pl-4 pr-4 md:pl-6 md:pr-6"
     >
-      <div className="flex items-start gap-4 max-w-3xl mx-auto">
+      <div className="flex items-start gap-4 max-w-3xl ml-0 mr-auto">
         <div className="flex-shrink-0">
           {isConnie ? (
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
@@ -109,30 +116,48 @@ function Message({ message }: Props) {
                   </div>
                 )}
                 {parsed.sections.length > 0 && (
-                  <>
-                    <div
-                      ref={reportPrintRef}
-                      data-report-content
-                      className="space-y-4"
+                  <div
+                    ref={reportPrintRef}
+                    data-report-content
+                    className="space-y-4"
+                  >
+                    <ReportCards sections={parsed.sections} />
+                  </div>
+                )}
+                {showPdfButton && (
+                  <div className="flex flex-wrap items-center gap-2 pt-2 print:hidden">
+                    <button
+                      type="button"
+                      onClick={() => triggerPrint(reportPrintRef.current)}
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
                     >
-                      <ReportCards sections={parsed.sections} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 pt-2 print:hidden">
-                      <button
-                        type="button"
-                        onClick={() => triggerPrint(reportPrintRef.current)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
-                      >
-                        Descargar PDF
-                      </button>
-                    </div>
-                  </>
+                      Descargar PDF
+                    </button>
+                  </div>
                 )}
               </>
             ) : (
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                {message.text}
-              </ReactMarkdown>
+              <>
+                <div
+                  ref={hasTable ? reportPrintRef : undefined}
+                  data-report-content={hasTable ? true : undefined}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {message.text}
+                  </ReactMarkdown>
+                </div>
+                {showPdfButton && (
+                  <div className="flex flex-wrap items-center gap-2 pt-2 print:hidden">
+                    <button
+                      type="button"
+                      onClick={() => triggerPrint(reportPrintRef.current)}
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+                    >
+                      Descargar PDF
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

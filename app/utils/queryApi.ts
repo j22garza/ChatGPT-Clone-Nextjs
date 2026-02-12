@@ -10,7 +10,7 @@ import { computeRiskScore, formatRiskContextForPrompt } from "./riskScoring";
 import { enforceOneQuestion, enforceSingleQuestion } from "./enforceOneQuestion";
 import { getConversationReadiness } from "./conversationReadiness";
 
-const searchWeb = async (query: string): Promise<string> => {
+const searchWeb = async (query: string, options?: { advanced?: boolean; maxResults?: number }): Promise<string> => {
   try {
     const tavilyApiKey = process.env.TAVILY_API_KEY;
     if (!tavilyApiKey) return "";
@@ -21,8 +21,8 @@ const searchWeb = async (query: string): Promise<string> => {
       body: JSON.stringify({
         api_key: tavilyApiKey,
         query,
-        search_depth: "basic",
-        max_results: 3,
+        search_depth: options?.advanced ? "advanced" : "basic",
+        max_results: options?.maxResults ?? 3,
       }),
     });
 
@@ -183,12 +183,28 @@ const query = async (
   const config = getActiveProviderConfig();
   const modelToUse = resolveModel(provider, model);
 
+  const isProviderRequest =
+    /proveedor|proveedores|contacto|contactos|cotización|cotizar|presupuesto|empresas\s*sugeridas|recomiendame\s*proveed|pásame\s*el\s*contact|buscar\s*proveedores/i.test(prompt);
   const needsWebSearch =
-    /actual|reciente|último|nuevo|buscar|normativa|regulación|proveedor/i.test(prompt);
-  const webSearchResults = needsWebSearch ? await searchWeb(prompt) : "";
+    isProviderRequest ||
+    /actual|reciente|último|nuevo|buscar|normativa|regulación/i.test(prompt);
+  const providerQuery = isProviderRequest
+    ? `proveedores EHS seguridad industrial México certificados autorizados ${prompt.slice(0, 80)}`.trim()
+    : prompt;
+  const webSearchResults = needsWebSearch
+    ? await searchWeb(providerQuery, isProviderRequest ? { advanced: true, maxResults: 6 } : undefined)
+    : "";
 
   const messageHistory = messages.slice(-10);
   const derived = deriveStateFromHistory(messageHistory);
+  const lastAssistant = [...messageHistory].reverse().find((m) => m.role === "assistant");
+  const lastAssistantText = (lastAssistant?.content ?? "").toLowerCase();
+  const alreadySentFullReport =
+    lastAssistantText.length > 600 &&
+    (lastAssistantText.includes("tabla de riesgos") ||
+      lastAssistantText.includes("resumen ejecutivo") ||
+      (lastAssistantText.includes("próximo paso") && lastAssistantText.includes("controles")));
+
   const readiness = getConversationReadiness(messageHistory, prompt);
   const riskResult = readiness.readinessLevel === "HIGH" ? computeRiskScore(messageHistory, prompt) : null;
 
@@ -197,7 +213,18 @@ const query = async (
     userContent = `${prompt}\n\n--- Información actualizada de internet ---\n${webSearchResults}\n--- Fin de información web ---\n\nUsa esta información para enriquecer tu respuesta.`;
     userContent += addWebCitationReminder(true, webSearchResults);
   }
-  if (readiness.readinessLevel === "HIGH") {
+
+  if (alreadySentFullReport) {
+    userContent += `
+
+[INSTRUCCIÓN OBLIGATORIA — SEGUIMIENTO]
+El usuario YA recibió el análisis completo (resumen, tabla de riesgos, controles). Responde SOLO a su mensaje actual.
+- NO repitas el Resumen Ejecutivo ni la Tabla de Riesgos.
+- NO generes de nuevo el análisis P×E×C.
+- Si pide proveedores/contactos: da nombres, criterios o usa la información de internet si la tienes arriba.
+- Si pide presupuesto: da criterios o rangos, no vuelvas a preguntar por plazos de remodelación.
+- Una sola pregunta de cierre si aplica, o cierra con un siguiente paso concreto.`;
+  } else if (readiness.readinessLevel === "HIGH") {
     if (riskResult) userContent += "\n\n" + formatRiskContextForPrompt(riskResult);
     userContent += OUTPUT_CONTRACT;
   } else if (readiness.readinessLevel === "LOW") {

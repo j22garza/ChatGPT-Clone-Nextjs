@@ -5,10 +5,7 @@
  */
 
 import type { ChatMessageItem } from "../context/ChatContext";
-import {
-  getConversationReadiness,
-  type ReadinessLevel,
-} from "./conversationReadiness";
+import { getConversationReadiness } from "./conversationReadiness";
 
 export interface SuggestionChip {
   label: string;
@@ -82,10 +79,10 @@ function lastMessageIsReport(messages: ChatMessageItem[]): boolean {
   const last = messages.filter((m) => m.user.name === "Connie").pop();
   if (!last?.text) return false;
   const t = last.text.toLowerCase();
-  return (
-    /resumen\s*ejecutivo|tabla\s*de\s*riesgos|pr[oó]ximo\s*paso|controles\s*por\s*jerarquía/.test(t) &&
-    (t.length > 400 || /\n##\s/.test(last.text))
-  );
+  const hasReportMarks =
+    /resumen\s*ejecutivo|tabla\s*de\s*riesgos|pr[oó]ximo\s*paso|controles\s*por\s*jerarquía|empresas\s*sugeridas/.test(t);
+  const isLongOrStructured = t.length > 400 || /\n##\s/.test(last.text) || /\|\s*/.test(last.text);
+  return hasReportMarks && isLongOrStructured;
 }
 
 const DEFAULT_CHIPS: SuggestionChip[] = [
@@ -102,6 +99,13 @@ const POST_REPORT_CHIPS: SuggestionChip[] = [
   { label: "Necesito presupuesto", text: "Necesito orientación para presupuesto o cotización con proveedores." },
   { label: "Otra tarea o riesgo", text: "Quiero evaluar otra tarea o riesgo en la misma planta." },
   { label: "Cerrar y guardar", text: "Con esto tengo suficiente por ahora, gracias." },
+];
+
+const AFTER_PROVIDER_REQUEST_CHIPS: SuggestionChip[] = [
+  { label: "Buscar proveedores con contacto", text: "Quiero buscar proveedores reales con teléfono y correo, ¿cómo los busco?" },
+  { label: "Criterios de cotización", text: "Dame criterios para cotizar con proveedores (qué pedir, certificaciones)." },
+  { label: "Otra consulta", text: "Tengo otra consulta sobre un riesgo diferente." },
+  { label: "Cerrar", text: "Gracias, con esto basta." },
 ];
 
 function detectSectorFromMessages(messages: ChatMessageItem[]): string | null {
@@ -129,16 +133,25 @@ const MAX_CHIPS = 5;
 export function getContextualSuggestions(messages: ChatMessageItem[]): SuggestionChip[] {
   if (messages.length === 0) return DEFAULT_CHIPS.slice(0, MAX_CHIPS);
 
+  const lastUserText = messages.filter((m) => m.user.name !== "Connie").pop()?.text?.toLowerCase() ?? "";
+  const lastAssistantText = messages.filter((m) => m.user.name === "Connie").pop()?.text?.toLowerCase() ?? "";
+
   if (lastMessageIsReport(messages)) {
     return POST_REPORT_CHIPS.slice(0, MAX_CHIPS);
+  }
+
+  if (
+    /proveedor|contacto|presupuesto|cotización|empresas\s*sugeridas|pásame\s*el\s*contact|recomiendame\s*proveed/.test(lastUserText) &&
+    lastAssistantText.length > 200
+  ) {
+    return AFTER_PROVIDER_REQUEST_CHIPS.slice(0, MAX_CHIPS);
   }
 
   const history = messages.map((m) => ({
     role: m.user.name === "Connie" ? "assistant" : "user",
     content: m.text,
   }));
-  const lastUser = messages.filter((m) => m.user.name !== "Connie").pop()?.text ?? "";
-  const readiness = getConversationReadiness(history, lastUser);
+  const readiness = getConversationReadiness(history, lastUserText);
   const sector = detectSectorFromMessages(messages);
 
   if (readiness.readinessLevel === "HIGH") {
