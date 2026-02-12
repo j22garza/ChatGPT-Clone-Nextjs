@@ -42,14 +42,14 @@ export const MODEL_OPTIONS = [
   { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant (Groq)" },
 ];
 
-/** Obtener el proveedor activo según env (prioridad: LLM_PROVIDER > Groq > OpenAI). */
+/** Obtener el proveedor activo según env (prioridad: LLM_PROVIDER > ChatGPT/OpenAI > Groq). */
 export function getActiveProvider(): LLMProvider {
   const configured = process.env.LLM_PROVIDER?.toLowerCase() as LLMProvider | undefined;
   if (configured && LLM_PROVIDERS[configured]?.apiKey) {
     return configured;
   }
-  if (LLM_PROVIDERS.groq.apiKey) return "groq";
   if (LLM_PROVIDERS.openai.apiKey) return "openai";
+  if (LLM_PROVIDERS.groq.apiKey) return "groq";
   return "openai";
 }
 

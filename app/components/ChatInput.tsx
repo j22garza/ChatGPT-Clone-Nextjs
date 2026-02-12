@@ -44,17 +44,14 @@ function ChatInput({ chatId }: Props) {
           avatar: session.user?.image ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user?.name ?? "U")}`,
         },
       };
+      const prevMessages = getMessages(chatId);
+      const history = prevMessages.map((m) => ({
+        role: (m.user.name === "Connie" ? "assistant" : "user") as "user" | "assistant",
+        content: m.text,
+      }));
+
       addMessage(chatId, userMessage);
       addChatToList(session.user.email, chatId, text.slice(0, 50) + (text.length > 50 ? "…" : ""));
-
-      const prevMessages = getMessages(chatId);
-      const history = [
-        ...prevMessages.map((m) => ({
-          role: (m.user.name === "Connie" ? "assistant" : "user") as "user" | "assistant",
-          content: m.text,
-        })),
-        { role: "user" as const, content: text },
-      ];
 
       try {
         const response = await fetch("/api/askQuestion", {
