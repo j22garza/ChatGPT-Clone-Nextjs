@@ -4,6 +4,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import type { ReportSection } from "../utils/parseReportSections";
 import RiskTable from "./RiskTable";
+import ProvidersCard from "./ProvidersCard";
 
 type Props = {
   sections: ReportSection[];
@@ -17,31 +18,58 @@ const cardTitleClass =
 const proseCard =
   "prose prose-invert prose-sm max-w-none [&>p]:mb-2 [&>ul]:my-2 [&>ol]:my-2 [&>li]:my-0.5 text-gray-200 leading-relaxed";
 
+function isProveedoresSection(title: string): boolean {
+  return /proveedores?/i.test(title);
+}
+
 export default function ReportCards({ sections, className = "", printRef }: Props) {
   if (sections.length === 0) return null;
 
   return (
     <div ref={printRef} className={`space-y-4 ${className}`}>
-      {sections.map((sec, i) => (
-        <section
-          key={i}
-          className="rounded-xl border border-white/15 bg-white/5 p-4 md:p-5 shadow-lg print:break-inside-avoid print:shadow-none print:border print:bg-white print:border-gray-300"
-        >
-          <h3 className={cardTitleClass}>{sec.title}</h3>
-          {sec.type === "risk_table" && sec.tableData && (
-            <RiskTable
-              headers={sec.tableData.headers}
-              rows={sec.tableData.rows}
-              className="mt-2"
-            />
-          )}
-          {sec.type === "text" && sec.content && (
-            <div className={proseCard}>
-              <ReactMarkdown>{sec.content}</ReactMarkdown>
-            </div>
-          )}
-        </section>
-      ))}
+      {sections.map((sec, i) => {
+        const isProveedores = isProveedoresSection(sec.title);
+        return (
+          <section
+            key={i}
+            className={
+              isProveedores
+                ? "rounded-xl border-2 border-blue-400/50 bg-blue-500/10 p-4 md:p-5 shadow-lg shadow-blue-500/10 print:break-inside-avoid print:shadow-none print:border print:bg-white print:border-gray-300"
+                : "rounded-xl border border-white/15 bg-white/5 p-4 md:p-5 shadow-lg print:break-inside-avoid print:shadow-none print:border print:bg-white print:border-gray-300"
+            }
+          >
+            <h3 className={cardTitleClass}>
+              {isProveedores && (
+                <span className="mr-2" aria-hidden>📋</span>
+              )}
+              {sec.title}
+            </h3>
+            {sec.type === "risk_table" && sec.tableData && (
+              <RiskTable
+                headers={sec.tableData.headers}
+                rows={sec.tableData.rows}
+                className="mt-2"
+              />
+            )}
+            {sec.type === "text" && sec.content && (
+              <>
+                {isProveedores ? (
+                  <ProvidersCard
+                    title={sec.title}
+                    content={sec.content}
+                    defaultSearchQuery="proveedores EHS seguridad industrial certificados"
+                    defaultLocation=""
+                  />
+                ) : (
+                  <div className={proseCard}>
+                    <ReactMarkdown>{sec.content}</ReactMarkdown>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

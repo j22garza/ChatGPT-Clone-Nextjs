@@ -12,7 +12,7 @@ export interface ReportSection {
 }
 
 const SECTION_HEADERS =
-  /^##\s*(Resumen\s*Ejecutivo|Tabla\s*de\s*Riesgos?|Riesgos?\s*priorizados|Controles?\s*(por\s*Jerarquía|inmediatos|estructurales)?|Soluciones?|Pr[oó]ximo\s*paso|Recomendaciones?|Supuestos?|Falta\s*informaci[oó]n)/im;
+  /^##\s*(Resumen\s*Ejecutivo|Tabla\s*de\s*Riesgos?|Riesgos?\s*priorizados|Controles?\s*(por\s*Jerarquía|inmediatos|estructurales)?|Soluciones?|Proveedores?(\s*sugeridos?|\s*y\s*contacto)?|Pr[oó]ximo\s*paso|Recomendaciones?|Supuestos?|Falta\s*informaci[oó]n)/im;
 
 /**
  * Encuentra todas las secciones ## Título y extrae título + contenido hasta el siguiente ##.
