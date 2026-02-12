@@ -53,6 +53,9 @@ function ChatInput({ chatId }: Props) {
       addMessage(chatId, userMessage);
       addChatToList(session.user.email, chatId, text.slice(0, 50) + (text.length > 50 ? "…" : ""));
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 95000);
+
       try {
         const response = await fetch("/api/askQuestion", {
           method: "POST",
@@ -64,9 +67,16 @@ function ChatInput({ chatId }: Props) {
             session,
             history,
           }),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
-        const data = await response.json();
+        let data: { answer?: string };
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(response.ok ? "Respuesta inválida del servidor" : `Error ${response.status}. Vuelve a intentar.`);
+        }
         if (!response.ok) throw new Error(data.answer || `Error ${response.status}`);
 
         if (typeof data.stepIndex === "number") setStepIndex(data.stepIndex);
@@ -83,7 +93,13 @@ function ChatInput({ chatId }: Props) {
 
         toast.success("Connie ha respondido!", { id: notification });
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Error al procesar tu mensaje.";
+        clearTimeout(timeoutId);
+        const isAbort = err instanceof Error && err.name === "AbortError";
+        const message = isAbort
+          ? "La consulta tardó demasiado. Intenta con una pregunta más corta o de nuevo en un momento."
+          : err instanceof Error
+            ? err.message
+            : "Error al procesar tu mensaje.";
         toast.error(message, { id: notification, duration: 5000 });
       } finally {
         setIsLoading(false);

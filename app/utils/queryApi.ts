@@ -180,7 +180,10 @@ const query = async (
   }
   const webSearchResults = formatSearchResultsForPrompt(searchResults);
 
-  const messageHistory = messages.slice(-10);
+  const rawHistory = Array.isArray(messages) ? messages.slice(-10) : [];
+  const messageHistory = rawHistory
+    .filter((m): m is ChatMessage => m != null && typeof m === "object" && (m.role === "user" || m.role === "assistant") && typeof (m as ChatMessage).content === "string")
+    .map((m) => ({ role: m.role, content: String((m as ChatMessage).content) }));
   const derived = deriveStateFromHistory(messageHistory);
   const lastAssistant = [...messageHistory].reverse().find((m) => m.role === "assistant");
   const lastAssistantText = (lastAssistant?.content ?? "").toLowerCase();

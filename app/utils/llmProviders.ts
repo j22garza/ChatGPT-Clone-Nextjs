@@ -16,7 +16,7 @@ export const LLM_PROVIDERS: Record<LLMProvider, LLMConfig> = {
     speed: "fast",
     cost: "low",
     model: "gpt-4o-mini",
-    apiKey: process.env.CHAT_GPT_KEY || "",
+    apiKey: process.env.CHAT_GPT_KEY || process.env.OPENAI_API_KEY || "",
   },
   groq: {
     name: "Groq (Ultra Fast)",
