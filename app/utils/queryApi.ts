@@ -1,20 +1,17 @@
-import { ChatOpenAI } from "@langchain/openai";
 import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
-import {
-  getActiveProvider,
-  getActiveProviderConfig,
-  resolveModel,
-  LLM_PROVIDERS,
-  type LLMProvider,
-} from "./llmProviders";
+import type { LLMProvider } from "./llmProviders";
+import { getProvidersWithKeys } from "./llmProviders";
 import { deriveStateFromHistory, type ConversationState } from "./stateDerivation";
 import { computeRiskScore, formatRiskContextForPrompt } from "./riskScoring";
 import { enforceOneQuestion, enforceSingleQuestion } from "./enforceOneQuestion";
 import { getConversationReadiness } from "./conversationReadiness";
-import {
-  searchWeb,
-  formatSearchResultsForPrompt,
-} from "./webSearch";
+import { searchWeb, formatSearchResultsForPrompt } from "./webSearch";
+import { getCandidateProviders } from "./providerRouter";
+import { setProviderDisabled, setProviderCooldown } from "./providerHealth";
+import type { LLMProviderName } from "./providerHealth";
+import { createChatModel, getModelForProvider } from "./llmFactory";
+import { classifyError } from "./llmErrorClassifier";
+import { getGracefulFallbackResponse } from "./gracefulFallbackResponse";
 
 const SYSTEM_PROMPT = `Eres Connie, el asistente virtual especializado en EHS (Environmental, Health & Safety) de Conexus para México y Latinoamérica. Ayudas a empresas con seguridad industrial, salud ocupacional, medio ambiente, prevención de riesgos y protección civil.
 
@@ -145,17 +142,23 @@ function addWebCitationReminder(hasWebBlock: boolean, webBlockText: string): str
 export interface QueryResult {
   answer: string;
   derivedState: { state: ConversationState; stepIndex: number };
+  meta?: { usedProvider: string; fallbackUsed: boolean };
+}
+
+const BACKOFF_MS = [300, 900];
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 const query = async (
   prompt: string,
   _chatId: string,
   model: string | undefined,
-  messages: ChatMessage[] = []
+  messages: ChatMessage[] = [],
+  requestId?: string
 ): Promise<QueryResult> => {
-  const provider = getActiveProvider();
-  const config = getActiveProviderConfig();
-  const modelToUse = resolveModel(provider, model);
+  const reqId = requestId ?? `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
   const isProviderRequest =
     /proveedor|proveedores|contacto|contactos|cotización|cotizar|presupuesto|empresas\s*sugeridas|recomiendame\s*proveed|pásame\s*el\s*contact|buscar\s*proveedores/i.test(prompt);
@@ -223,28 +226,17 @@ El usuario YA recibió el análisis completo (resumen, tabla de riesgos, control
     userContent += "\n\n" + PREANALYSIS_INSTRUCTION;
   }
 
-  const langchainMessages = [
+  const buildMessages = (historySlice: typeof messageHistory, content: string) => [
     new SystemMessage(SYSTEM_PROMPT),
-    ...messageHistory.map((m) =>
+    ...historySlice.map((m) =>
       m.role === "assistant" ? new AIMessage(m.content) : new HumanMessage(m.content)
     ),
-    new HumanMessage(userContent),
+    new HumanMessage(content),
   ];
 
-  const invokeLlm = (p: LLMProvider) => {
-    const cfg = LLM_PROVIDERS[p];
-    const modelName = resolveModel(p, model);
-    const llm = new ChatOpenAI({
-      modelName,
-      temperature: 0.7,
-      maxTokens: 1500,
-      apiKey: cfg.apiKey,
-      ...(cfg.endpoint && { configuration: { baseURL: cfg.endpoint } }),
-    });
-    return llm.invoke(langchainMessages);
-  };
+  let langchainMessages = buildMessages(messageHistory, userContent);
 
-  const processResponse = (response: Awaited<ReturnType<typeof invokeLlm>>) => {
+  const processResponse = (response: { content: unknown }) => {
     let content = typeof response.content === "string" ? response.content : String(response.content ?? "");
     if (!content.trim()) throw new Error("Respuesta vacía del modelo");
     if (readiness.readinessLevel === "HIGH") {
@@ -255,53 +247,107 @@ El usuario YA recibió el análisis completo (resumen, tabla de riesgos, control
     return content;
   };
 
-  console.log(`[queryApi] provider: ${provider}, model: ${modelToUse}, state: ${derived.state}, readiness: ${readiness.readinessLevel}`);
+  const candidates = getCandidateProviders({
+    userModel: model,
+    readinessLevel: readiness.readinessLevel,
+  });
 
-  try {
-    const response = await invokeLlm(provider);
-    const content = processResponse(response);
-    console.log(`[queryApi] OK, length: ${content.length}`);
+  if (candidates.length === 0) {
+    console.warn(`[queryApi] request_id=${reqId} no candidates (all disabled or no keys)`);
     return {
-      answer: content,
+      answer: getGracefulFallbackResponse(),
       derivedState: { state: derived.state, stepIndex: derived.stepIndex },
+      meta: { usedProvider: "none", fallbackUsed: true },
     };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[queryApi] Error:", err);
+  }
 
-    if (/API key|authentication|invalid_api_key/i.test(message)) {
-      throw new Error(
-        "Error de autenticación: Verifica que las API keys estén correctamente configuradas (GROQ_API_KEY o CHAT_GPT_KEY)."
+  let fallbackUsed = false;
+  let usedProvider: string = candidates[0];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const provider = candidates[i];
+    const modelName = getModelForProvider(provider, model);
+
+    const logAttempt = (status: string, errorCode?: string, retryAfter?: number) => {
+      console.warn(
+        `[queryApi] request_id=${reqId} provider=${provider} model=${modelName} status=${status} error_code=${errorCode ?? ""} retry_after=${retryAfter ?? ""}`
       );
-    }
-    if (/rate limit|quota|overloaded/i.test(message)) {
-      const other: LLMProvider = provider === "openai" ? "groq" : "openai";
-      if (LLM_PROVIDERS[other].apiKey) {
-        console.log(`[queryApi] Límite en ${provider}, intentando con ${other}`);
+    };
+
+    try {
+      const chatModel = createChatModel(provider, modelName);
+      const response = await chatModel.invoke(langchainMessages);
+      const content = processResponse(response);
+      if (i > 0) fallbackUsed = true;
+      usedProvider = provider;
+      return {
+        answer: content,
+        derivedState: { state: derived.state, stepIndex: derived.stepIndex },
+        ...(fallbackUsed && { meta: { usedProvider, fallbackUsed } }),
+      };
+    } catch (err: unknown) {
+      const classified = classifyError(err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      logAttempt("error", classified.category, classified.retryAfterSeconds);
+
+      if (classified.category === "rate_limit") {
+        setProviderCooldown(provider as LLMProviderName, classified.retryAfterSeconds ?? 60);
+        continue;
+      }
+      if (classified.category === "auth") {
+        setProviderDisabled(provider as LLMProviderName);
+        continue;
+      }
+      if (classified.category === "server" || classified.category === "timeout") {
+        let lastErr = err;
+        for (const delay of BACKOFF_MS) {
+          await sleep(delay);
+          try {
+            const chatModel = createChatModel(provider, modelName);
+            const response = await chatModel.invoke(langchainMessages);
+            const content = processResponse(response);
+            if (i > 0) fallbackUsed = true;
+            usedProvider = provider;
+            return {
+              answer: content,
+              derivedState: { state: derived.state, stepIndex: derived.stepIndex },
+              ...(fallbackUsed && { meta: { usedProvider, fallbackUsed } }),
+            };
+          } catch (retryErr) {
+            lastErr = retryErr;
+          }
+        }
+        continue;
+      }
+      if (classified.category === "context") {
+        const reducedHistory = messageHistory.slice(-4);
+        langchainMessages = buildMessages(reducedHistory, userContent);
         try {
-          const fallbackResponse = await invokeLlm(other);
-          const content = processResponse(fallbackResponse);
-          console.log(`[queryApi] OK con ${other}, length: ${content.length}`);
+          const chatModel = createChatModel(provider, modelName);
+          const response = await chatModel.invoke(langchainMessages);
+          const content = processResponse(response);
+          if (i > 0) fallbackUsed = true;
+          usedProvider = provider;
           return {
             answer: content,
             derivedState: { state: derived.state, stepIndex: derived.stepIndex },
+            ...(fallbackUsed && { meta: { usedProvider, fallbackUsed } }),
           };
-        } catch (fallbackErr) {
-          console.error("[queryApi] Fallback también falló:", fallbackErr);
+        } catch {
+          langchainMessages = buildMessages(messageHistory, userContent);
         }
+        continue;
       }
-      throw new Error(
-        "Límite de uso alcanzado. Intenta más tarde o verifica tu plan (OpenAI/Groq). Si tienes otra API key configurada, se intentará usar automáticamente."
-      );
+      // unknown or other: try next provider
     }
-    if (/timeout|Timeout/i.test(message)) {
-      throw new Error("La consulta tardó demasiado. Intenta con una pregunta más corta.");
-    }
-
-    throw new Error(
-      `Error al procesar tu consulta: ${message}. Por favor intenta de nuevo.`
-    );
   }
+
+  console.warn(`[queryApi] request_id=${reqId} all providers failed, returning graceful response`);
+  return {
+    answer: getGracefulFallbackResponse(),
+    derivedState: { state: derived.state, stepIndex: derived.stepIndex },
+    meta: { usedProvider: "none", fallbackUsed: true },
+  };
 };
 
 export default query;

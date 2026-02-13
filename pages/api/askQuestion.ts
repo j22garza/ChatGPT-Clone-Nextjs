@@ -1,11 +1,16 @@
 import query from "@/app/utils/queryApi";
-import { LLM_PROVIDERS } from "@/app/utils/llmProviders";
+import { getGracefulFallbackResponse } from "@/app/utils/gracefulFallbackResponse";
+import { getProvidersWithKeys } from "@/app/utils/llmProviders";
 import type { NextApiRequest, NextApiResponse } from "next";
 
-type Data = { answer: string; stepIndex?: number; state?: string };
+type Data = { answer: string; stepIndex?: number; state?: string; meta?: { usedProvider?: string; fallbackUsed?: boolean } };
 
 function hasAnyApiKey(): boolean {
-  return !!(LLM_PROVIDERS.openai.apiKey || LLM_PROVIDERS.groq.apiKey);
+  return getProvidersWithKeys().length > 0;
+}
+
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 export default async function handler(
@@ -45,37 +50,46 @@ export default async function handler(
     }
     if (!hasAnyApiKey()) {
       return sendJson(503, {
-        answer: "No hay API key configurada. Añade CHAT_GPT_KEY o OPENAI_API_KEY (o GROQ_API_KEY) en las variables de entorno.",
+        answer: "No hay API key configurada. Añade al menos una: CHAT_GPT_KEY, OPENAI_API_KEY, GROQ_API_KEY o ANTHROPIC_API_KEY.",
       });
     }
 
     const previousMessages = Array.isArray(history)
       ? history.slice(-10).filter((m) => m && typeof m.role === "string" && typeof m.content === "string")
       : [];
+    const requestId = generateRequestId();
 
-    console.log(`[askQuestion] chat: ${chatId}, user: ${session.user.email}, history: ${previousMessages.length} msgs`);
+    console.log(`[askQuestion] request_id=${requestId} chat=${chatId} user=${session.user.email} history=${previousMessages.length} msgs`);
 
     const timeoutMs = 90000;
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout: La consulta tardó más de 90 segundos")), timeoutMs)
+      setTimeout(() => reject(new Error("Timeout")), timeoutMs)
     );
     const result = await Promise.race([
-      query(prompt.trim(), chatId, model || "gpt-4o-mini", previousMessages),
+      query(prompt.trim(), chatId, model || "gpt-4o-mini", previousMessages, requestId),
       timeoutPromise,
     ]);
 
     if (!result?.answer || typeof result.answer !== "string" || !result.answer.trim()) {
-      return sendJson(500, { answer: "Connie no pudo generar una respuesta. La respuesta está vacía." });
+      return sendJson(200, {
+        answer: getGracefulFallbackResponse(),
+        stepIndex: result?.derivedState?.stepIndex,
+        state: result?.derivedState?.state,
+        meta: { usedProvider: "none", fallbackUsed: true },
+      });
     }
 
     return sendJson(200, {
       answer: result.answer,
       stepIndex: result.derivedState?.stepIndex,
       state: result.derivedState?.state,
+      ...(result.meta && { meta: result.meta }),
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error al procesar la consulta.";
-    console.error("[askQuestion]", error);
-    return sendJson(500, { answer: message });
+    console.error("[askQuestion] request_id=", (error as { requestId?: string })?.requestId ?? "unknown", error);
+    return sendJson(200, {
+      answer: getGracefulFallbackResponse(),
+      meta: { usedProvider: "none", fallbackUsed: true },
+    });
   }
 }
